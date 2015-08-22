@@ -10,19 +10,24 @@ except ImportError:
     import Tkinter as tk
     # from Tkinter import *
     import ttk
+
 import json
 import sys
 import json
+from serial import Serial
+from mock_serial import MockSerial
 
 from smart_module import SmartModule
 
 
-class Interface(object):
+class Interface(tk.Frame):
     def __init__(self, root, smart_wheels):
         """Interface for SmartWheels, 
 
         makes an interface for a list of sw_configs
         """
+        super(Interface, self).__init__(root)
+
         self.root = root
         mainframe = ttk.Frame(root, padding="3 3 12 12")
         mainframe.grid(column=0, row=0, sticky=(tk.N, tk.W, tk.E, tk.S))
@@ -77,6 +82,9 @@ class Interface(object):
             self.tabs.append(new_tab)
             note.add(new_tab, text="%d %s" % (i, smart_wheel.name))
 
+            row += 1
+            ttk.Entry(new_tab).grid(row=row, column=1, columnspan=3)
+
         for child in mainframe.winfo_children(): 
             child.grid_configure(padx=5, pady=5)
 
@@ -99,17 +107,34 @@ class Interface(object):
             # update GUI
             # TODO
 
+    # def close_window(self):
+    #     print("close!")
+    #     super(Interface, self).close_window()
+
 
 def main():
     root = tk.Tk()
     root.title("SmartWheel")
 
-    smart_wheels = []
-    for filename in ['config.json', 'serialconfig.txt']:
-        new_so = SmartModule(filename=filename, name='SmartWheel [%s]' % filename)
-        smart_wheels.append(new_so)
+    # serial_wrapper = Serial
+    serial_wrapper = MockSerial
 
-    interface = Interface(root, smart_wheels)
+    smart_modules = []
+    for filename in ['config.json', 'serialconfig.txt']:
+        new_sm = SmartModule.from_config(
+            filename, name='SmartWheel [%s]' % filename, timeout=10, 
+            serial_wrapper=serial_wrapper)
+        smart_modules.append(new_sm)
+
+    interface = Interface(root, smart_modules)
+
+    def on_close():
+        root.destroy()
+        # shut down smart modules
+        for sm in smart_modules:
+            sm.shut_down()
+
+    root.protocol("WM_DELETE_WINDOW", on_close)  # close window
     root.mainloop()
 
 
