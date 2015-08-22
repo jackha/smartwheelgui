@@ -1,7 +1,7 @@
 import json
 
 
-class SerialObject(object):
+class SmartModule(object):
     """
     SerialObject: SmartWheel (or other serial object) python binding
     """

@@ -1,15 +1,20 @@
 #!/usr/bin/python
 # -*- coding: utf-8 -*-
 
-# python 2.x
-import Tkinter as tk
-from Tkinter import *
-import ttk
+try:
+    # python3: default
+    import tkinter as tk
+    import tkinter.ttk as ttk
+except ImportError:
+    # python 2.x
+    import Tkinter as tk
+    # from Tkinter import *
+    import ttk
 import json
 import sys
 import json
 
-from serial_object import SerialObject
+from smart_module import SmartModule
 
 
 class Interface(object):
@@ -20,7 +25,7 @@ class Interface(object):
         """
         self.root = root
         mainframe = ttk.Frame(root, padding="3 3 12 12")
-        mainframe.grid(column=0, row=0, sticky=(N, W, E, S))
+        mainframe.grid(column=0, row=0, sticky=(tk.N, tk.W, tk.E, tk.S))
         mainframe.columnconfigure(0, weight=1)
         mainframe.rowconfigure(0, weight=1)
 
@@ -101,7 +106,7 @@ def main():
 
     smart_wheels = []
     for filename in ['config.json', 'serialconfig.txt']:
-        new_so = SerialObject(filename=filename, name='SmartWheel [%s]' % filename)
+        new_so = SmartModule(filename=filename, name='SmartWheel [%s]' % filename)
         smart_wheels.append(new_so)
 
     interface = Interface(root, smart_wheels)

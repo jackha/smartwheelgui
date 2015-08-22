@@ -2,9 +2,13 @@
 # -*- coding: utf-8 -*-
 
 # python 2.x
-import Tkinter as tk
-from Tkinter import *
-import ttk
+try:
+    import Tkinter as tk
+    # from Tkinter import *
+    import ttk
+except ImportError:
+    import tkinter as tk
+    import tkinter.ttk as ttk
 import json
 import sys
 from listports import serial_ports
@@ -17,7 +21,7 @@ class Interface(object):
     def __init__(self, root):
         self.root = root
         mainframe = ttk.Frame(root, padding="3 3 12 12")
-        mainframe.grid(column=0, row=0, sticky=(N, W, E, S))
+        mainframe.grid(column=0, row=0, sticky=(tk.N, tk.W, tk.E, tk.S))
         mainframe.columnconfigure(0, weight=1)
         mainframe.rowconfigure(0, weight=1)
 
@@ -36,7 +40,7 @@ class Interface(object):
         self.baud.current(0)
         self.baud.grid(row=1, column=1)
 
-        ttk.Button(mainframe, text="Save & Quit", command=self.save).grid(row=2, column=1, sticky=W)
+        ttk.Button(mainframe, text="Save & Quit", command=self.save).grid(row=2, column=1, sticky=tk.W)
 
         for child in mainframe.winfo_children(): 
             child.grid_configure(padx=5, pady=5)
