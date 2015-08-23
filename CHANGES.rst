@@ -22,7 +22,9 @@ TODO:
 
 - real SmartModule?
 
-- user command from GUI to SmartModule.
+- user command from GUI to SmartModule
+
+- more gui actions.
 
 
 19/8
