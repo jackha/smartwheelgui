@@ -45,7 +45,7 @@ class Interface(object):
             child.grid_configure(padx=5, pady=5)
 
     def save(self):
-        with open('config.json', 'w') as config_file:
+        with open('testconf1.json', 'w') as config_file:
             json.dump({'comport': self.ports.get(), 'baudrate': self.baud.get()}, config_file)
         sys.exit(0)
 
