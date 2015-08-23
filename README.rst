@@ -2,6 +2,7 @@ Prerequisities
 --------------
 
 pyserial::
+
     $ pip install pyserial
 
 
