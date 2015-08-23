@@ -20,13 +20,13 @@ from mock_serial import MockSerial
 from smart_module import SmartModule
 
 
-class Interface(tk.Frame):
+class Interface():
     def __init__(self, root, smart_wheels):
         """Interface for SmartWheels, 
 
         makes an interface for a list of sw_configs
         """
-        super(Interface, self).__init__(root)
+        # super(Interface, self).__init__(root)
 
         self.root = root
         mainframe = ttk.Frame(root, padding="3 3 12 12")
@@ -120,7 +120,7 @@ def main():
     serial_wrapper = MockSerial
 
     smart_modules = []
-    for filename in ['config.json', 'serialconfig.txt']:
+    for filename in ['testconf1.json', 'testconf2.json']:
         new_sm = SmartModule.from_config(
             filename, name='SmartWheel [%s]' % filename, timeout=10, 
             serial_wrapper=serial_wrapper)
