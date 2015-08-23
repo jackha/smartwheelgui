@@ -11,6 +11,8 @@
 
 - cleanup
 
+- use list_ports from serial package
+
 
 TODO:
 
