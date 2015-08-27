@@ -14,6 +14,9 @@ except ImportError:
 import json
 import sys
 import json
+import time
+import threading
+
 from serial import Serial
 from mock_serial import MockSerial
 
@@ -27,6 +30,7 @@ class Interface():
         makes an interface for a list of sw_configs
         """
         # super(Interface, self).__init__(root)
+        self.i_wanna_live = True
 
         self.root = root
         mainframe = ttk.Frame(root, padding="3 3 12 12")
@@ -37,9 +41,15 @@ class Interface():
         note = ttk.Notebook(mainframe)
         note.grid(row=0, column=0)
 
-        self.tabs = []
-        for i, smart_wheel in enumerate(smart_wheels):
+        self.gui_elements = {}
+        self.tabs = {}
+
+        #self.tabs = []
+        for i, smart_wheel in enumerate(smart_wheels):  # every smart_wheel must have a unique name
+            self.gui_elements[smart_wheel.name] = {}
             new_tab = ttk.Frame(note)
+            self.tabs[smart_wheel.name] = new_tab
+
             row = 0
             ttk.Label(new_tab, text=smart_wheel.name).grid(row=row, column=0, columnspan=3)
 
@@ -54,7 +64,7 @@ class Interface():
             row += 1
             ttk.Button(
                 new_tab, text="Reset", 
-                command=lambda: self.button(smart_wheel, new_tab, 'reset')
+                command=self.button_fun(smart_wheel, new_tab, 'reset')
                 ).grid(row=row, column=0)
             ttk.Button(
                 new_tab, text="Config", 
@@ -79,11 +89,26 @@ class Interface():
                 from_=-100, to=100,
                 orient=tk.HORIZONTAL).grid(row=row, column=0, columnspan=3)
 
-            self.tabs.append(new_tab)
+            # self.tabs.append(new_tab)
             note.add(new_tab, text="%d %s" % (i, smart_wheel.name))
 
+            print("new smart_wheel %s" % smart_wheel.name)
+
+            # input command
             row += 1
-            ttk.Entry(new_tab).grid(row=row, column=1, columnspan=3)
+            input_field = ttk.Entry(new_tab)
+            input_field.grid(row=row, column=1, columnspan=3)
+            self.gui_elements[smart_wheel.name]['input_field'] = input_field
+
+            # command result
+            row += 1
+            output_field = tk.Text(new_tab)
+            output_field.grid(
+                row=row, column=1, columnspan=3, rowspan=3)
+            self.gui_elements[smart_wheel.name]['output_field'] = output_field
+
+            update_thread = threading.Thread(target=self.update_thread_fun(smart_wheel))
+            update_thread.start()
 
         for child in mainframe.winfo_children(): 
             child.grid_configure(padx=5, pady=5)
@@ -92,7 +117,11 @@ class Interface():
         """Do the appropriate action for the current SmartWheel"""
         print("button: %s for SmartWheel[%s]" % (action, str(smart_wheel)))
         if action == 'reset':
-            smart_wheel.reset()
+            sent = smart_wheel.reset()
+            self.message(smart_wheel, '-> [%s]\n' % sent)
+            # input_value = self.gui_elements[smart_wheel.name]['input_field'].get()
+            # print("input field value = %s" % input_value)
+            # self.gui_elements[smart_wheel.name]['output_field'].insert('end -1 chars', input_value + '\n')
         elif action == 'connect':
             smart_wheel.connect()
         elif action == 'config':
@@ -106,6 +135,26 @@ class Interface():
                 smart_wheel.enable()
             # update GUI
             # TODO
+
+    def update_thread_fun(self, smart_wheel):
+        def update_thread():
+            while self.i_wanna_live:
+                while smart_wheel.incoming:
+                    new_message = smart_wheel.incoming.pop(0)
+                    self.message(smart_wheel, '<- [%s]\n' % new_message)
+                time.sleep(0.001)
+        return update_thread
+
+    def button_fun(self, smart_wheel, tab, action):
+        """
+        return a button function without parameters with these parameters included 
+        """
+        def new_fun():
+            return self.button(smart_wheel, tab, action)
+        return new_fun
+
+    def message(self, smart_wheel, msg):
+        self.gui_elements[smart_wheel.name]['output_field'].insert('end -1 chars', msg)
 
     # def close_window(self):
     #     print("close!")
@@ -122,7 +171,7 @@ def main():
     smart_modules = []
     for filename in ['testconf1.json', 'testconf2.json']:
         new_sm = SmartModule.from_config(
-            filename, name='SmartWheel [%s]' % filename, timeout=10, 
+            filename, name='SmartWheel [%s]' % filename, timeout=1, 
             serial_wrapper=serial_wrapper)
         smart_modules.append(new_sm)
 
@@ -133,6 +182,7 @@ def main():
         # shut down smart modules
         for sm in smart_modules:
             sm.shut_down()
+        interface.i_wanna_live = False
 
     root.protocol("WM_DELETE_WINDOW", on_close)  # close window
     root.mainloop()

@@ -12,6 +12,7 @@ class SmartModule(object):
     The class uses threads for read and write separately, and a semaphore to 
     prevent events to happen simultaneous.
     """
+    CMD_RESET = '$8'
 
     def __init__(self, port, baudrate, timeout=10, name='', serial_wrapper=Serial):
         """
@@ -38,6 +39,8 @@ class SmartModule(object):
         self._write_thread = threading.Thread(target=self.write_thread)
         self._write_thread.start()
 
+        self.incoming = []  # to be filled with read data
+
     @classmethod
     def from_config(
         cls, filename, timeout=0, name='', serial_wrapper=Serial):
@@ -52,12 +55,14 @@ class SmartModule(object):
 
     def read_thread(self):
         while self.i_wanna_live:
-            self.semaphore.acquire()
+            #self.semaphore.acquire()
             #try:
-            self.serial.read()  # let's hope this never crashes
+            new_read = self.serial.read()  # let's hope this never crashes
+            if new_read:
+                self.incoming.append(new_read)
             #except:
             #    self.message("OOPS, serial read failed")
-            self.semaphore.release()
+            #self.semaphore.release()
             # self.do_something()
             # self.message(self.counter)
             sleep(0.01)  # 10 ms sleep
@@ -67,12 +72,12 @@ class SmartModule(object):
             try:
                 write_item = self.write_queue.pop(0)
 
-                self.semaphore.acquire()
-                try:
-                    self.serial.write(write_item)  # let's hope this never crashes
-                except:
-                    self.message("OOPS, serial write failed")
-                self.semaphore.release()
+                #self.semaphore.acquire()
+                #try:
+                self.serial.write(write_item)  # let's hope this never crashes
+                #except:
+                #    self.message("OOPS, serial write failed")
+                #self.semaphore.release()
             except IndexError:
                 pass  # no more items in the write queue
             sleep(0.01)  # 10 ms sleep
@@ -94,6 +99,8 @@ class SmartModule(object):
 
     def reset(self):
         self.message("reset")
+        self.write_queue.append(self.CMD_RESET)
+        return self.CMD_RESET
 
     def enable(self):
         self.enabled = True
