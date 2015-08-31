@@ -5,6 +5,22 @@ from time import sleep
 from serial import Serial
 
 
+class NotConnectedException(Exception):
+    pass
+
+
+def connected_fun(func):
+    """
+    decorator that checks connection before doing something with the connection
+    """
+    def fun(self, *args, **kwargs):
+        if self.serial is None:
+            self.message("you're not connected. try connecting first.")
+            raise NotConnectedException("you're not connected. try connecting first.")
+        else:
+            return func(self, *args, **kwargs)
+    return fun
+
 class SmartModule(object):
     """
     SmartModule: SmartWheel (or other serial object) python binding
@@ -25,14 +41,19 @@ class SmartModule(object):
         self.enabled = False
         self.name = name
 
-        self.connected = False
+        # self.connected = False
 
         # add actions to the write queue and the write thread will consume them
         self.write_queue = []  
         self.i_wanna_live = True
 
         self.semaphore = threading.Semaphore()
-        self.serial = serial_wrapper(self.serial_port, self.baudrate, timeout=timeout)  # '/dev/ttyS1', 19200, timeout=1
+
+        # this connects the port
+        self.serial = None
+        self.serial_wrapper = serial_wrapper
+        self.timeout = timeout
+        # self.serial = serial_wrapper(self.serial_port, self.baudrate, timeout=timeout)  # '/dev/ttyS1', 19200, timeout=1
 
         self._read_thread = threading.Thread(target=self.read_thread)
         self._read_thread.start()
@@ -57,9 +78,10 @@ class SmartModule(object):
         while self.i_wanna_live:
             #self.semaphore.acquire()
             #try:
-            new_read = self.serial.read()  # let's hope this never crashes
-            if new_read:
-                self.incoming.append(new_read)
+            if self.serial is not None:
+                new_read = self.serial.read()  # let's hope this never crashes
+                if new_read:
+                    self.incoming.append(new_read)
             #except:
             #    self.message("OOPS, serial read failed")
             #self.semaphore.release()
@@ -70,11 +92,11 @@ class SmartModule(object):
     def write_thread(self):
         while self.i_wanna_live:
             try:
-                write_item = self.write_queue.pop(0)
-
+                if self.serial is not None:
+                    write_item = self.write_queue.pop(0)
                 #self.semaphore.acquire()
                 #try:
-                self.serial.write(write_item)  # let's hope this never crashes
+                    self.serial.write(write_item)  # let's hope this never crashes
                 #except:
                 #    self.message("OOPS, serial write failed")
                 #self.semaphore.release()
@@ -88,7 +110,8 @@ class SmartModule(object):
 
     def connect(self):
         self.message("connect")
-        self.connected = True
+        self.serial = self.serial_wrapper(
+            self.serial_port, self.baudrate, timeout=self.timeout)  # '/dev/ttyS1', 19200, timeout=1
 
     def status(self):
         # TODO: return status of smartwheel as dict
@@ -97,6 +120,7 @@ class SmartModule(object):
     def do_something(self):
         self.counter += 1
 
+    @connected_fun
     def reset(self):
         self.message("reset")
         self.write_queue.append(self.CMD_RESET)

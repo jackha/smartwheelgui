@@ -82,6 +82,7 @@ class MockSerial(object):
                 print("$2: speed=%d, dir=%d" % self.setpoint_speed, self.setpoint_dir)
                 response = ['$2']
             elif command[0] == '$8':
+                # reset
                 response = ['$8', '1']
             elif command[0] == '$9':
                 response = ['$9', '1']

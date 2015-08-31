@@ -21,6 +21,7 @@ from serial import Serial
 from mock_serial import MockSerial
 
 from smart_module import SmartModule
+from smart_module import NotConnectedException
 
 
 class Interface():
@@ -56,7 +57,7 @@ class Interface():
             row += 1
             ttk.Button(
                 new_tab, text="Connect", 
-                command=lambda: self.button(smart_wheel, new_tab, 'connect')
+                command=self.button_fun(smart_wheel, new_tab, 'connect')
                 ).grid(row=row, column=0)
             ttk.Checkbutton(new_tab, text="State").grid(row=row, column=1)
             ttk.Entry(new_tab, text="COMX").grid(row=row, column=2)
@@ -68,7 +69,7 @@ class Interface():
                 ).grid(row=row, column=0)
             ttk.Button(
                 new_tab, text="Config", 
-                command=lambda: self.button(smart_wheel, new_tab, 'config')
+                command=self.button_fun(smart_wheel, new_tab, 'config')
                 ).grid(row=row, column=2)
 
             row += 1
@@ -116,32 +117,36 @@ class Interface():
     def button(self, smart_wheel, tab, action):
         """Do the appropriate action for the current SmartWheel"""
         print("button: %s for SmartWheel[%s]" % (action, str(smart_wheel)))
-        if action == 'reset':
-            sent = smart_wheel.reset()
-            self.message(smart_wheel, '-> [%s]\n' % sent)
-            # input_value = self.gui_elements[smart_wheel.name]['input_field'].get()
-            # print("input field value = %s" % input_value)
-            # self.gui_elements[smart_wheel.name]['output_field'].insert('end -1 chars', input_value + '\n')
-        elif action == 'connect':
-            smart_wheel.connect()
-        elif action == 'config':
-            # some config dialog, then save to smart_wheel
-            print("config")
-        elif action == 'enable':
-            # check the status, then enable or disable
-            if smart_wheel.enabled:
-                smart_wheel.disable()
-            else:
-                smart_wheel.enable()
-            # update GUI
-            # TODO
+        try:
+            if action == 'reset':
+                sent = smart_wheel.reset()
+                self.message(smart_wheel, '-> [%s]' % sent)
+                # input_value = self.gui_elements[smart_wheel.name]['input_field'].get()
+                # print("input field value = %s" % input_value)
+                # self.gui_elements[smart_wheel.name]['output_field'].insert('end -1 chars', input_value + '\n')
+            elif action == 'connect':
+                smart_wheel.connect()
+                self.message(smart_wheel, 'connected')
+            elif action == 'config':
+                # some config dialog, then save to smart_wheel
+                print("config")
+            elif action == 'enable':
+                # check the status, then enable or disable
+                if smart_wheel.enabled:
+                    smart_wheel.disable()
+                else:
+                    smart_wheel.enable()
+                # update GUI
+                # TODO
+        except NotConnectedException as err:
+            self.message(smart_wheel, 'Oops, there was an error: {}'.format(err))
 
     def update_thread_fun(self, smart_wheel):
         def update_thread():
             while self.i_wanna_live:
                 while smart_wheel.incoming:
                     new_message = smart_wheel.incoming.pop(0)
-                    self.message(smart_wheel, '<- [%s]\n' % new_message)
+                    self.message(smart_wheel, '<- [%s]' % new_message)
                 time.sleep(0.001)
         return update_thread
 
@@ -154,7 +159,7 @@ class Interface():
         return new_fun
 
     def message(self, smart_wheel, msg):
-        self.gui_elements[smart_wheel.name]['output_field'].insert('end -1 chars', msg)
+        self.gui_elements[smart_wheel.name]['output_field'].insert('end -1 chars', msg + '\n')
 
     # def close_window(self):
     #     print("close!")
