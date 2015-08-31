@@ -25,6 +25,9 @@ from smart_module import NotConnectedException
 
 
 class Interface():
+    TEXT_CONNECT = 'Connect'
+    TEXT_DISCONNECT = 'Disconnect'
+
     def __init__(self, root, smart_wheels):
         """Interface for SmartWheels, 
 
@@ -55,11 +58,20 @@ class Interface():
             ttk.Label(new_tab, text=smart_wheel.name).grid(row=row, column=0, columnspan=3)
 
             row += 1
-            ttk.Button(
-                new_tab, text="Connect", 
+            connect_btn = ttk.Button(
+                new_tab, text=self.TEXT_CONNECT, 
                 command=self.button_fun(smart_wheel, new_tab, 'connect')
-                ).grid(row=row, column=0)
-            ttk.Checkbutton(new_tab, text="State").grid(row=row, column=1)
+                )
+            connect_btn.grid(row=row, column=0)
+            self.gui_elements[smart_wheel.name]['connect_btn'] = connect_btn
+
+            check = ttk.Checkbutton(
+                new_tab, text="State", 
+                command=self.button_fun(smart_wheel, new_tab, 'enable')
+                )
+            check.grid(row=row, column=1)
+            self.gui_elements[smart_wheel.name]['enable_checkbutton'] = check
+
             ttk.Entry(new_tab, text="COMX").grid(row=row, column=2)
 
             row += 1
@@ -127,15 +139,26 @@ class Interface():
             elif action == 'connect':
                 smart_wheel.connect()
                 self.message(smart_wheel, 'connected')
+                # TODO: how to change button label
+                # self.gui_elements[smart_wheel.name]['connect_btn'].textvariable = tk.StringVar(self.root, self.TEXT_DISCONNECT)
             elif action == 'config':
                 # some config dialog, then save to smart_wheel
                 print("config")
             elif action == 'enable':
                 # check the status, then enable or disable
-                if smart_wheel.enabled:
-                    smart_wheel.disable()
+                sent = None                
+                if 'selected' in self.gui_elements[smart_wheel.name]['enable_checkbutton'].state():
+                    if not smart_wheel.enabled:
+                        sent = smart_wheel.enable()
+                    else:
+                        self.message(smart_wheel, 'ignored: smart wheel already enabled')
                 else:
-                    smart_wheel.enable()
+                    if smart_wheel.enabled:
+                        sent = smart_wheel.disable()
+                    else:
+                        self.message(smart_wheel, 'ignored: smart wheel already disabled')
+                if sent:
+                    self.message(smart_wheel, '-> [%s]' % sent)
                 # update GUI
                 # TODO
         except NotConnectedException as err:

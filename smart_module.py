@@ -29,6 +29,8 @@ class SmartModule(object):
     prevent events to happen simultaneous.
     """
     CMD_RESET = '$8'
+    CMD_ENABLE = '$1'
+    CMD_DISABLE = '$0'
 
     def __init__(self, port, baudrate, timeout=10, name='', serial_wrapper=Serial):
         """
@@ -126,14 +128,21 @@ class SmartModule(object):
         self.write_queue.append(self.CMD_RESET)
         return self.CMD_RESET
 
+    @connected_fun
     def enable(self):
         self.enabled = True
+        self.write_queue.append(self.CMD_ENABLE)
         self.message("enable")
+        return self.CMD_ENABLE
 
+    @connected_fun
     def disable(self):
         self.enabled = False
+        self.write_queue.append(self.CMD_DISABLE)
         self.message("disable")
+        return self.CMD_DISABLE
 
+    @connected_fun
     def command(self, cmd):
         self.message("Command: %s" % cmd)
 
