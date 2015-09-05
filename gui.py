@@ -151,8 +151,11 @@ class Interface():
                 # print("input field value = %s" % input_value)
                 # self.gui_elements[smart_wheel.name]['output_field'].insert('end -1 chars', input_value + '\n')
             elif action == 'connect':
-                smart_wheel.connect()
-                self.message(smart_wheel, 'connected')
+                try:
+                    smart_wheel.connect()
+                    self.message(smart_wheel, 'connected')
+                except:
+                    self.message(smart_wheel, 'ERROR connecting, see logging')
                 # TODO: how to change button label
                 # self.gui_elements[smart_wheel.name]['connect_btn'].textvariable = tk.StringVar(self.root, self.TEXT_DISCONNECT)
             elif action == 'config':

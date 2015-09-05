@@ -2,6 +2,7 @@
 # -*- coding: utf-8 -*-
 import logging
 import json
+import serial
 
 from serial import Serial
 from mock_serial import MockSerial
@@ -117,9 +118,13 @@ class Connection(object):
             logging.debug("port=%s" % self.conf.comport)
             logging.debug("baud=%s" % self.conf.baudrate)
             logging.debug("timeout=%s" % self.conf.timeout)
-            self.connection = self.connection_class(
-                port=self.conf.comport, baudrate=self.conf.baudrate, 
-                timeout=self.conf.timeout) 
+            try:
+                self.connection = self.connection_class(
+                    port=self.conf.comport, baudrate=self.conf.baudrate, 
+                    timeout=self.conf.timeout) 
+            except serial.SerialException as ex:
+                logging.exception("Could not connect serial")
+                raise
             logging.debug('yay')
         elif self.conf.connection_type == ConnectionConfig.CONNECTION_TYPE_MOCK:
             self.connection = self.connection_class(timeout=self.conf.timeout)
