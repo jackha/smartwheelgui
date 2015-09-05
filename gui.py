@@ -21,7 +21,7 @@ from serial import Serial
 from mock_serial import MockSerial
 
 from smart_module import SmartModule
-from smart_module import NotConnectedException
+from connection import NotConnectedException
 
 
 class Interface():
@@ -194,13 +194,11 @@ def main():
     root.title("SmartWheel")
 
     # serial_wrapper = Serial
-    serial_wrapper = MockSerial
+    # serial_wrapper = MockSerial
 
     smart_modules = []
     for filename in ['testconf1.json', 'testconf2.json']:
-        new_sm = SmartModule.from_config(
-            filename, name='SmartWheel [%s]' % filename, timeout=1, 
-            serial_wrapper=serial_wrapper)
+        new_sm = SmartModule.from_config(filename)
         smart_modules.append(new_sm)
 
     interface = Interface(root, smart_modules)

@@ -1,12 +1,9 @@
 import json
 import threading
+import connection
 
 from time import sleep
 from serial import Serial
-
-
-class NotConnectedException(Exception):
-    pass
 
 
 def connected_fun(func):
@@ -14,12 +11,13 @@ def connected_fun(func):
     decorator that checks connection before doing something with the connection
     """
     def fun(self, *args, **kwargs):
-        if self.serial is None:
+        if not self.connection.is_connected():
             self.message("you're not connected. try connecting first.")
-            raise NotConnectedException("you're not connected. try connecting first.")
+            raise connection.NotConnectedException("you're not connected. try connecting first.")
         else:
             return func(self, *args, **kwargs)
     return fun
+
 
 class SmartModule(object):
     """
@@ -32,16 +30,19 @@ class SmartModule(object):
     CMD_ENABLE = '$1'
     CMD_DISABLE = '$0'
 
-    def __init__(self, port, baudrate, timeout=10, name='', serial_wrapper=Serial):
+    def __init__(self, connection):
+        #port, baudrate, timeout=10, name='', serial_wrapper=Serial):
         """
         port + baudrate
         """
-        self.serial_port = port
-        self.baudrate = baudrate
+        #self.serial_port = port
+        #self.baudrate = baudrate
+
+        self.connection = connection
 
         self.counter = 0
         self.enabled = False
-        self.name = name
+        self.name = self.connection.conf.name
 
         # self.connected = False
 
@@ -53,8 +54,9 @@ class SmartModule(object):
 
         # this connects the port
         self.serial = None
-        self.serial_wrapper = serial_wrapper
-        self.timeout = timeout
+        #self.serial_wrapper = serial_wrapper
+        
+        self.timeout = self.connection.conf.timeout  
         # self.serial = serial_wrapper(self.serial_port, self.baudrate, timeout=timeout)  # '/dev/ttyS1', 19200, timeout=1
 
         self._read_thread = threading.Thread(target=self.read_thread)
@@ -66,22 +68,17 @@ class SmartModule(object):
 
     @classmethod
     def from_config(
-        cls, filename, timeout=0, name='', serial_wrapper=Serial):
-        
-        """Create a class from a filename"""
-        with open(filename, 'r') as f:
-            cfg = json.load(f)
-        return cls(
-            port=cfg['comport'], baudrate=int(cfg['baudrate']),
-            timeout=timeout, name=name, 
-            serial_wrapper=serial_wrapper)
+        cls, filename):
+
+        conn = connection.Connection.from_file(filename)
+        return cls(conn)
 
     def read_thread(self):
         while self.i_wanna_live:
             #self.semaphore.acquire()
             #try:
-            if self.serial is not None:
-                new_read = self.serial.read()  # let's hope this never crashes
+            if self.connection.is_connected():
+                new_read = self.connection.connection.read()  # let's hope this never crashes
                 if new_read:
                     self.incoming.append(new_read)
             #except:
@@ -94,11 +91,11 @@ class SmartModule(object):
     def write_thread(self):
         while self.i_wanna_live:
             try:
-                if self.serial is not None:
+                if self.connection.is_connected():
                     write_item = self.write_queue.pop(0)
                 #self.semaphore.acquire()
                 #try:
-                    self.serial.write(write_item)  # let's hope this never crashes
+                    self.connection.connection.write(write_item)  # let's hope this never crashes
                 #except:
                 #    self.message("OOPS, serial write failed")
                 #self.semaphore.release()
@@ -106,14 +103,11 @@ class SmartModule(object):
                 pass  # no more items in the write queue
             sleep(0.01)  # 10 ms sleep
 
-    def initialize(self):
-        # TODO: initialize serial port with these settings
-        pass
-
     def connect(self):
         self.message("connect")
-        self.serial = self.serial_wrapper(
-            self.serial_port, self.baudrate, timeout=self.timeout)  # '/dev/ttyS1', 19200, timeout=1
+        # self.serial = self.serial_wrapper(
+        #     self.serial_port, self.baudrate, timeout=self.timeout)  # '/dev/ttyS1', 19200, timeout=1
+        self.connection.connect()  # will create connection.connection
 
     def status(self):
         # TODO: return status of smartwheel as dict

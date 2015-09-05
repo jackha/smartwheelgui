@@ -1,5 +1,8 @@
 #!/usr/bin/python
 # -*- coding: utf-8 -*-
+"""
+Connection config program
+"""
 
 # python 2.x
 try:
@@ -12,6 +15,8 @@ except ImportError:
 import json
 import sys
 import connection
+import logging
+
 # from listports import serial_ports
 from serial.tools.list_ports import comports
 
@@ -41,6 +46,13 @@ class ConfigGUI(object):
         self.baud.grid(row=row, column=1)
 
         row += 1
+        ttk.Label(mainframe, text="conn type").grid(row=row, column=0)
+        self.conn_type = ttk.Combobox(mainframe)
+        self.conn_type['values'] = connection.ConnectionConfig.CONNECTION_TYPES
+        self.conn_type.current(0)
+        self.conn_type.grid(row=row, column=1)
+
+        row += 1
         ttk.Button(mainframe, text="Save & Quit", command=self.save).grid(row=row, column=1, sticky=tk.W)
 
         for child in mainframe.winfo_children(): 
@@ -48,13 +60,21 @@ class ConfigGUI(object):
 
     def save(self):
         config = connection.ConnectionConfig()
-        config.port = self.ports.get()
-        config.baud = self.baud.get()
-        config.save('testconf1.json')
+        config.set_var('comport', self.ports.get())
+        config.set_var('baudrate', self.baud.get())
+        config.set_var('connection_type', self.conn_type.get())
+        filename = 'testconf1.json'
+        config.save(filename)
+        logging.info("Saved file: %s" % filename)
+        logging.info("Quitting...")
         sys.exit(0)
 
 
 def main():
+    #logging.basicConfig(filename='config.log', level=logging.DEBUG)
+    logging.basicConfig(level=logging.DEBUG)  # no file, only console
+
+    logging.info("Connection config tool")
     root = tk.Tk()
     root.title("Connection config")
     root.columnconfigure(0, weight=1)
