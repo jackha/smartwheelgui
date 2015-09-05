@@ -73,6 +73,15 @@ class ConnectionConfig(object):
         else:
             logger.error("Tried to set unknown variable: %s" % var_name)
 
+    def __str__(self):
+        if self.connection_type == self.CONNECTION_TYPE_SERIAL:
+            return "ConnectionConfig [%s]: serial port=%s, baudrate=%d, timeout=%d" % (
+                self.name, self.comport, self.baudrate, self.timeout)
+        elif self.connection_type == self.CONNECTION_TYPE_MOCK:
+            return "ConnectionConfig [%s]: mock timeout=%d" % (self.name, self.timeout)
+        elif self.connection_type == self.CONNECTION_TYPE_NETWORK:
+            return "ConnectionConfig [%s]: network config" % (self.name)
+
 
 class Connection(object):
     """
@@ -105,8 +114,13 @@ class Connection(object):
         create connecion instance
         """
         if self.conf.connection_type == ConnectionConfig.CONNECTION_TYPE_SERIAL:
+            logging.debug("port=%s" % self.conf.comport)
+            logging.debug("baud=%s" % self.conf.baudrate)
+            logging.debug("timeout=%s" % self.conf.timeout)
             self.connection = self.connection_class(
-                self.conf.comport, self.conf.baudrate, timeout=self.conf.timeout) 
+                port=self.conf.comport, baudrate=self.conf.baudrate, 
+                timeout=self.conf.timeout) 
+            logging.debug('yay')
         elif self.conf.connection_type == ConnectionConfig.CONNECTION_TYPE_MOCK:
             self.connection = self.connection_class(timeout=self.conf.timeout)
         elif self.conf.connection_type == ConnectionConfig.CONNECTION_TYPE_NETWORK:
@@ -118,3 +132,5 @@ class Connection(object):
         else:
             return False
 
+    def __str__(self):
+        return "Connection: conf=%s" % str(self.conf)

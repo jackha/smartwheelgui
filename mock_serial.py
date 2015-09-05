@@ -38,17 +38,20 @@ class MockSerial(object):
 
             time.sleep(0.001)  # block until there is something to give back
         if self.outgoing:
-            return self.outgoing.pop(0)
+            # output is in UTF-8
+            return bytes(self.outgoing.pop(0), 'UTF-8')
         else:
             # logging.debug("serial timeout")
             return ''  # timeout occurred
 
     def readline(self):
-        return "this is a dummy line"
+        # return "this is a dummy line"
+        return self.read()
 
     def write(self, s):
-        self.message("write %s" % s)
-        self.incoming.append(s)
+        data = s.decode('utf-8')
+        self.message("write %s" % data)
+        self.incoming.append(data)
         self._process_incoming()
 
     def close(self):
@@ -66,7 +69,8 @@ class MockSerial(object):
         if self.incoming:
             command_line = self.incoming.pop(0)
             response = None
-            command = command_line.split(',')
+            command = [c.strip() for c in command_line.split(',')]
+
             if command[0] == '$0':
                 response = ['$0']
             elif command[0] == '$1':

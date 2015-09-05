@@ -32,6 +32,16 @@ class ConfigGUI(object):
         mainframe.rowconfigure(0, weight=0)
 
         row = 0
+
+        # filename
+        ttk.Label(mainframe, text="filename").grid(row=row, column=0)
+        self.name_var = tk.StringVar()
+        self.name_var.set("connection name")
+
+        self.name = ttk.Entry(mainframe, textvariable=self.name_var)
+        self.name.grid(row=row, column=1)
+
+        row += 1
         ttk.Label(mainframe, text="port").grid(row=row, column=0)
         self.ports = ttk.Combobox(mainframe)
         self.ports['values'] = [c[0] for c in com_ports]
@@ -52,6 +62,15 @@ class ConfigGUI(object):
         self.conn_type.current(0)
         self.conn_type.grid(row=row, column=1)
 
+        # filename
+        row += 1
+        ttk.Label(mainframe, text="filename").grid(row=row, column=0)
+        self.filename_var = tk.StringVar()
+        self.filename_var.set("testconf1.json")
+
+        self.filename = ttk.Entry(mainframe, textvariable=self.filename_var)
+        self.filename.grid(row=row, column=1)
+
         row += 1
         ttk.Button(mainframe, text="Save & Quit", command=self.save).grid(row=row, column=1, sticky=tk.W)
 
@@ -63,7 +82,9 @@ class ConfigGUI(object):
         config.set_var('comport', self.ports.get())
         config.set_var('baudrate', self.baud.get())
         config.set_var('connection_type', self.conn_type.get())
-        filename = 'testconf1.json'
+        config.set_var('name', self.name.get())
+
+        filename = self.filename.get()
         config.save(filename)
         logging.info("Saved file: %s" % filename)
         logging.info("Quitting...")

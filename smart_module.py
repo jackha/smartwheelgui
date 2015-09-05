@@ -1,6 +1,7 @@
 import json
 import threading
 import connection
+import logging
 
 from time import sleep
 from serial import Serial
@@ -26,9 +27,9 @@ class SmartModule(object):
     The class uses threads for read and write separately, and a semaphore to 
     prevent events to happen simultaneous.
     """
-    CMD_RESET = '$8'
-    CMD_ENABLE = '$1'
-    CMD_DISABLE = '$0'
+    CMD_RESET = '$8\r\n'
+    CMD_ENABLE = '$1\r\n'
+    CMD_DISABLE = '$0\r\n'
 
     def __init__(self, connection):
         #port, baudrate, timeout=10, name='', serial_wrapper=Serial):
@@ -78,9 +79,14 @@ class SmartModule(object):
             #self.semaphore.acquire()
             #try:
             if self.connection.is_connected():
-                new_read = self.connection.connection.read()  # let's hope this never crashes
+                new_read = self.connection.connection.readline()  # let's hope this never crashes
                 if new_read:
-                    self.incoming.append(new_read)
+                    data_decoded = new_read.decode('utf-8')
+                    logging.debug("Read: %s" % data_decoded)
+                    self.incoming.append(data_decoded)
+                else:
+                    #print('.')
+                    pass
             #except:
             #    self.message("OOPS, serial read failed")
             #self.semaphore.release()
@@ -95,7 +101,9 @@ class SmartModule(object):
                     write_item = self.write_queue.pop(0)
                 #self.semaphore.acquire()
                 #try:
-                    self.connection.connection.write(write_item)  # let's hope this never crashes
+                    logging.debug("going to write '%s'" % write_item)
+                    # let's hope this never crashes
+                    self.connection.connection.write(bytes(write_item, 'UTF-8'))  
                 #except:
                 #    self.message("OOPS, serial write failed")
                 #self.semaphore.release()
@@ -105,6 +113,8 @@ class SmartModule(object):
 
     def connect(self):
         self.message("connect")
+        logging.info("going to connect to connection!!")
+        logging.debug(str(self.connection))
         # self.serial = self.serial_wrapper(
         #     self.serial_port, self.baudrate, timeout=self.timeout)  # '/dev/ttyS1', 19200, timeout=1
         self.connection.connect()  # will create connection.connection
@@ -139,6 +149,8 @@ class SmartModule(object):
     @connected_fun
     def command(self, cmd):
         self.message("Command: %s" % cmd)
+        self.write_queue.append(cmd)
+        return cmd
 
     def __str__(self):
         return self.name
@@ -148,4 +160,4 @@ class SmartModule(object):
         self.i_wanna_live = False
 
     def message(self, msg):
-        print("[%s] %s" % (str(self), msg))
+        logging.debug("[%s] %s" % (str(self), msg))

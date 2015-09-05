@@ -16,9 +16,7 @@ import sys
 import json
 import time
 import threading
-
-from serial import Serial
-from mock_serial import MockSerial
+import logging
 
 from smart_module import SmartModule
 from connection import NotConnectedException
@@ -113,6 +111,8 @@ class Interface():
             input_field.grid(row=row, column=1, columnspan=3)
             self.gui_elements[smart_wheel.name]['input_field'] = input_field
 
+            input_field.bind('<Return>', self.event_fun(smart_wheel, new_tab))
+
             # command result
             row += 1
             output_field = tk.Text(new_tab)
@@ -126,13 +126,27 @@ class Interface():
         for child in mainframe.winfo_children(): 
             child.grid_configure(padx=5, pady=5)
 
+    def handle_command(self, smart_wheel, tab, event):
+        command = self.gui_elements[smart_wheel.name]['input_field'].get()
+        logging.debug("Handle: %s" % command)
+        result = smart_wheel.command(command + '\r\n')
+        self.message(smart_wheel, '-> [%s]' % result.strip())
+
+    def event_fun(self, smart_wheel, tab):
+        """
+        return a button function without parameters with these parameters included 
+        """
+        def new_fun(event):
+            return self.handle_command(smart_wheel, tab, event)
+        return new_fun
+
     def button(self, smart_wheel, tab, action):
         """Do the appropriate action for the current SmartWheel"""
         print("button: %s for SmartWheel[%s]" % (action, str(smart_wheel)))
         try:
             if action == 'reset':
                 sent = smart_wheel.reset()
-                self.message(smart_wheel, '-> [%s]' % sent)
+                self.message(smart_wheel, '-> [%s]' % sent.strip())
                 # input_value = self.gui_elements[smart_wheel.name]['input_field'].get()
                 # print("input field value = %s" % input_value)
                 # self.gui_elements[smart_wheel.name]['output_field'].insert('end -1 chars', input_value + '\n')
@@ -190,14 +204,13 @@ class Interface():
 
 
 def main():
+    logging.basicConfig(level=logging.DEBUG)  # no file, only console
+
     root = tk.Tk()
     root.title("SmartWheel")
 
-    # serial_wrapper = Serial
-    # serial_wrapper = MockSerial
-
     smart_modules = []
-    for filename in ['testconf1.json', 'testconf2.json']:
+    for filename in ['testconf1.json', 'testconf2.json', 'testconf3.json']:
         new_sm = SmartModule.from_config(filename)
         smart_modules.append(new_sm)
 
