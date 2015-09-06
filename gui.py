@@ -20,11 +20,14 @@ import logging
 
 from smart_module import SmartModule
 from connection import NotConnectedException
+from config import config_main
 
 
 class Interface():
     TEXT_CONNECT = 'Connect'
     TEXT_DISCONNECT = 'Disconnect'
+
+    PADDING = '10 2 10 4'
 
     def __init__(self, root, smart_wheels):
         """Interface for SmartWheels, 
@@ -55,6 +58,60 @@ class Interface():
             row = 0
             ttk.Label(new_tab, text=smart_wheel.name).grid(row=row, column=0, columnspan=3)
 
+            # pw = ttk.PanedWindow(new_tab, orient=tk.VERTICAL)
+
+            # Connection
+            row += 1
+            label_frame_connection = ttk.Labelframe(new_tab, text='Connection', padding=self.PADDING)
+            label_frame_connection.grid(row=row, column=0, columnspan=4, sticky="nsew")
+            #label_frame_connection.columnconfigure(0, weight=1)
+            
+            ttk.Button(
+                label_frame_connection, text='Connect', 
+                command=self.button_fun(smart_wheel, new_tab, 'connect')
+                ).grid(row=0, column=0)
+            ttk.Button(
+                label_frame_connection, text='Reset', 
+                command=self.button_fun(smart_wheel, new_tab, 'reset')
+                ).grid(row=0, column=1)
+            ttk.Button(
+                label_frame_connection, text='Config', 
+                command=self.button_fun(smart_wheel, new_tab, 'config')
+                ).grid(row=0, column=2)
+            connection_label = ttk.Label(
+                label_frame_connection, 
+                text=smart_wheel.connection.conf.name + 'alalala')
+            connection_label.grid(row=0, column=3)
+
+            # Connection
+            row += 1
+            label_frame_wheel = ttk.Labelframe(new_tab, text='Wheel', padding=self.PADDING)
+            label_frame_wheel.grid(row=row, column=0, columnspan=4, sticky="nsew")
+            #label_frame_connection.columnconfigure(0, weight=1)
+            
+            ttk.Button(
+                label_frame_wheel, text='Enable', 
+                command=self.button_fun(smart_wheel, new_tab, 'enable')
+                ).grid(row=0, column=0)
+            ttk.Button(
+                label_frame_wheel, text='Disable', 
+                command=self.button_fun(smart_wheel, new_tab, 'disable')
+                ).grid(row=0, column=1)
+            ttk.Button(
+                label_frame_wheel, text='Config', 
+                command=self.button_fun(smart_wheel, new_tab, 'wheel-config')
+                ).grid(row=0, column=2)
+            wheel_label = ttk.Label(
+                label_frame_wheel, 
+                text=smart_wheel.name)
+            wheel_label.grid(row=0, column=3)
+            
+            # pw.add(label_frame_connection, weight=50)
+            # pw.add(label_frame_wheel, weight=50)
+            # # pw.pack(fill='both', expand=True)
+
+            # self.gui_elements[smart_wheel.name]['connection'] = label_frame_connection
+
             row += 1
             connect_btn = ttk.Button(
                 new_tab, text=self.TEXT_CONNECT, 
@@ -65,7 +122,7 @@ class Interface():
 
             check = ttk.Checkbutton(
                 new_tab, text="State", 
-                command=self.button_fun(smart_wheel, new_tab, 'enable')
+                command=self.button_fun(smart_wheel, new_tab, 'enable-disable')
                 )
             check.grid(row=row, column=1)
             self.gui_elements[smart_wheel.name]['enable_checkbutton'] = check
@@ -81,6 +138,10 @@ class Interface():
                 new_tab, text="Config", 
                 command=self.button_fun(smart_wheel, new_tab, 'config')
                 ).grid(row=row, column=2)
+            ttk.Button(
+                new_tab, text="Settings", 
+                command=self.button_fun(smart_wheel, new_tab, 'settings')
+                ).grid(row=row, column=3)
 
             row += 1
             ttk.Scale(new_tab, 
@@ -100,9 +161,6 @@ class Interface():
                 from_=-100, to=100,
                 orient=tk.HORIZONTAL).grid(row=row, column=0, columnspan=3)
 
-            # self.tabs.append(new_tab)
-            note.add(new_tab, text="%d %s" % (i, smart_wheel.name))
-
             print("new smart_wheel %s" % smart_wheel.name)
 
             # input command
@@ -111,6 +169,7 @@ class Interface():
             input_field.grid(row=row, column=1, columnspan=3)
             self.gui_elements[smart_wheel.name]['input_field'] = input_field
 
+            # <return> executes the command
             input_field.bind('<Return>', self.event_fun(smart_wheel, new_tab))
 
             # command result
@@ -123,14 +182,21 @@ class Interface():
             update_thread = threading.Thread(target=self.update_thread_fun(smart_wheel))
             update_thread.start()
 
-        for child in mainframe.winfo_children(): 
-            child.grid_configure(padx=5, pady=5)
+            # self.tabs.append(new_tab)
+            note.add(new_tab, text="%d %s" % (i, smart_wheel.name))
+
+        # for child in mainframe.winfo_children(): 
+        #     child.grid_configure(padx=5, pady=5)
 
     def handle_command(self, smart_wheel, tab, event):
         command = self.gui_elements[smart_wheel.name]['input_field'].get()
         logging.debug("Handle: %s" % command)
-        result = smart_wheel.command(command + '\r\n')
-        self.message(smart_wheel, '-> [%s]' % result.strip())
+        try:
+            result = smart_wheel.command(command + '\r\n')
+            self.message(smart_wheel, '-> [%s]' % result.strip())
+        except NotConnectedException as ex:
+            logging.exception("You're not connected yet.")
+            self.message(smart_wheel, 'ERROR, you are not connected.')
 
     def event_fun(self, smart_wheel, tab):
         """
@@ -160,10 +226,39 @@ class Interface():
                 # self.gui_elements[smart_wheel.name]['connect_btn'].textvariable = tk.StringVar(self.root, self.TEXT_DISCONNECT)
             elif action == 'config':
                 # some config dialog, then save to smart_wheel
-                print("config")
+                logging.info("config")
+                config_main()
+            elif action == 'wheel-config':
+                # some config dialog, then save to smart_wheel
+                logging.info("wheel config")
+                
             elif action == 'enable':
                 # check the status, then enable or disable
-                sent = None                
+                if not smart_wheel.enabled:
+                    sent = smart_wheel.enable()
+                    self.message(smart_wheel, '-> [%s]' % sent.strip())
+                else:
+                    self.message(smart_wheel, 'ignored, already enabled')
+                # if 'selected' in self.gui_elements[smart_wheel.name]['enable_checkbutton'].state():
+                #     if not smart_wheel.enabled:
+                #         sent = smart_wheel.enable()
+                #     else:
+                #         self.message(smart_wheel, 'ignored: smart wheel already enabled')
+                # else:
+                #     if smart_wheel.enabled:
+                #         sent = smart_wheel.disable()
+                #     else:
+                #         self.message(smart_wheel, 'ignored: smart wheel already disabled')
+                # update GUI
+                # TODO
+            elif action == 'disable':
+                if smart_wheel.enabled:
+                    sent = smart_wheel.disable()
+                    self.message(smart_wheel, '-> [%s]' % sent.strip())
+                else:
+                    self.message(smart_wheel, 'ignored, already disabled')
+            elif action == 'enable-disable':
+                sent = None
                 if 'selected' in self.gui_elements[smart_wheel.name]['enable_checkbutton'].state():
                     if not smart_wheel.enabled:
                         sent = smart_wheel.enable()
@@ -175,9 +270,8 @@ class Interface():
                     else:
                         self.message(smart_wheel, 'ignored: smart wheel already disabled')
                 if sent:
-                    self.message(smart_wheel, '-> [%s]' % sent)
-                # update GUI
-                # TODO
+                    self.message(smart_wheel, '-> [%s]' % sent.strip())
+
         except NotConnectedException as err:
             self.message(smart_wheel, 'Oops, there was an error: {}'.format(err))
 

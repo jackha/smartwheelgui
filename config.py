@@ -34,7 +34,7 @@ class ConfigGUI(object):
         row = 0
 
         # filename
-        ttk.Label(mainframe, text="filename").grid(row=row, column=0)
+        ttk.Label(mainframe, text="connection name").grid(row=row, column=0)
         self.name_var = tk.StringVar()
         self.name_var.set("connection name")
 
@@ -91,25 +91,31 @@ class ConfigGUI(object):
         sys.exit(0)
 
 
-def main():
-    #logging.basicConfig(filename='config.log', level=logging.DEBUG)
-    logging.basicConfig(level=logging.DEBUG)  # no file, only console
-
-    logging.info("Connection config tool")
-    root = tk.Tk()
-    root.title("Connection config")
-    root.columnconfigure(0, weight=1)
-    root.rowconfigure(0, weight=1)
-
+def config_gui(root):
+    """prepare and return gui"""
     # we get a list of: [port, desc, hwid], desc and hwid is seen as 'n/a'
     com_ports = comports()  
     if not com_ports:
         com_ports.append(['dummy', 'n/a', 'n/a'])
     interface = ConfigGUI(
         root, com_ports=com_ports, 
-        baud_rates=connection.BAUDRATES)
+        baud_rates=connection.BAUDRATES)    
+    return interface
+
+
+def config_main():
+    root = tk.Tk()
+    root.title("Connection config")
+    root.columnconfigure(0, weight=1)
+    root.rowconfigure(0, weight=1)
+
+    config_gui(root)
+
     root.mainloop()
 
 
 if __name__ == '__main__':
-    main()  
+    #logging.basicConfig(filename='config.log', level=logging.DEBUG)
+    logging.basicConfig(level=logging.DEBUG)  # no file, only console
+    logging.info("Connection config tool")
+    config_main()  
