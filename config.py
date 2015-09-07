@@ -1,5 +1,8 @@
 #!/usr/bin/python
 # -*- coding: utf-8 -*-
+"""
+Connection config program
+"""
 
 # python 2.x
 try:
@@ -12,6 +15,8 @@ except ImportError:
 import json
 import sys
 import connection
+import logging
+
 # from listports import serial_ports
 from serial.tools.list_ports import comports
 
@@ -27,6 +32,16 @@ class ConfigGUI(object):
         mainframe.rowconfigure(0, weight=0)
 
         row = 0
+
+        # filename
+        ttk.Label(mainframe, text="connection name").grid(row=row, column=0)
+        self.name_var = tk.StringVar()
+        self.name_var.set("connection name")
+
+        self.name = ttk.Entry(mainframe, textvariable=self.name_var)
+        self.name.grid(row=row, column=1)
+
+        row += 1
         ttk.Label(mainframe, text="port").grid(row=row, column=0)
         self.ports = ttk.Combobox(mainframe)
         self.ports['values'] = [c[0] for c in com_ports]
@@ -41,6 +56,22 @@ class ConfigGUI(object):
         self.baud.grid(row=row, column=1)
 
         row += 1
+        ttk.Label(mainframe, text="conn type").grid(row=row, column=0)
+        self.conn_type = ttk.Combobox(mainframe)
+        self.conn_type['values'] = connection.ConnectionConfig.CONNECTION_TYPES
+        self.conn_type.current(0)
+        self.conn_type.grid(row=row, column=1)
+
+        # filename
+        row += 1
+        ttk.Label(mainframe, text="filename").grid(row=row, column=0)
+        self.filename_var = tk.StringVar()
+        self.filename_var.set("testconf1.json")
+
+        self.filename = ttk.Entry(mainframe, textvariable=self.filename_var)
+        self.filename.grid(row=row, column=1)
+
+        row += 1
         ttk.Button(mainframe, text="Save & Quit", command=self.save).grid(row=row, column=1, sticky=tk.W)
 
         for child in mainframe.winfo_children(): 
@@ -48,27 +79,43 @@ class ConfigGUI(object):
 
     def save(self):
         config = connection.ConnectionConfig()
-        config.port = self.ports.get()
-        config.baud = self.baud.get()
-        config.save('testconf1.json')
+        config.set_var('comport', self.ports.get())
+        config.set_var('baudrate', self.baud.get())
+        config.set_var('connection_type', self.conn_type.get())
+        config.set_var('name', self.name.get())
+
+        filename = self.filename.get()
+        config.save(filename)
+        logging.info("Saved file: %s" % filename)
+        logging.info("Quitting...")
         sys.exit(0)
 
 
-def main():
-    root = tk.Tk()
-    root.title("Connection config")
-    root.columnconfigure(0, weight=1)
-    root.rowconfigure(0, weight=1)
-
+def config_gui(root):
+    """prepare and return gui"""
     # we get a list of: [port, desc, hwid], desc and hwid is seen as 'n/a'
     com_ports = comports()  
     if not com_ports:
         com_ports.append(['dummy', 'n/a', 'n/a'])
     interface = ConfigGUI(
         root, com_ports=com_ports, 
-        baud_rates=connection.BAUDRATES)
+        baud_rates=connection.BAUDRATES)    
+    return interface
+
+
+def config_main():
+    root = tk.Tk()
+    root.title("Connection config")
+    root.columnconfigure(0, weight=1)
+    root.rowconfigure(0, weight=1)
+
+    config_gui(root)
+
     root.mainloop()
 
 
 if __name__ == '__main__':
-    main()  
+    #logging.basicConfig(filename='config.log', level=logging.DEBUG)
+    logging.basicConfig(level=logging.DEBUG)  # no file, only console
+    logging.info("Connection config tool")
+    config_main()  

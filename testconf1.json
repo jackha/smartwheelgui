@@ -1,4 +1,7 @@
 {
-  "baudrate": "115200", 
-  "comport": "/dev/cu.usbserial-DAYO2UPE"
+  "connection_type": "mock", 
+  "baudrate": "9600", 
+  "comport": "/dev/cu.Bluetooth-Incoming-Port", 
+  "timeout": 1, 
+  "name": "SmartWheel [mock1]"
 }

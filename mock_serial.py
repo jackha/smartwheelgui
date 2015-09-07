@@ -1,15 +1,10 @@
 import time
+import logging
 
 
 class MockSerial(object):
-    def __init__(self, serial_port, baudrate, timeout=1, **kwargs):
-        # '/dev/ttyS1', 19200, timeout=1
-        self.serial_port = serial_port
-        self.baudrate = baudrate
+    def __init__(self, timeout=1, **kwargs):
         self.timeout = timeout
-
-        self.name = '%s:%d timeout=%d' % (
-            self.serial_port, self.baudrate, self.timeout)
 
         self.incoming = []
         self.outgoing = []
@@ -43,24 +38,27 @@ class MockSerial(object):
 
             time.sleep(0.001)  # block until there is something to give back
         if self.outgoing:
-            return self.outgoing.pop(0)
+            # output is in UTF-8
+            return bytes(self.outgoing.pop(0), 'UTF-8')
         else:
-            # print("serial timeout")
+            # logging.debug("serial timeout")
             return ''  # timeout occurred
 
     def readline(self):
-        return "this is a dummy line"
+        # return "this is a dummy line"
+        return self.read()
 
     def write(self, s):
-        self.message("write %s" % s)
-        self.incoming.append(s)
+        data = s.decode('utf-8')
+        self.message("write %s" % data)
+        self.incoming.append(data)
         self._process_incoming()
 
     def close(self):
         pass
 
     def __str__(self):
-        return "[mock com: %s]" % self.name
+        return "[mock com]"
 
     def message(self, msg):
         return "[%s] %s" % (str(self), msg)
@@ -71,7 +69,8 @@ class MockSerial(object):
         if self.incoming:
             command_line = self.incoming.pop(0)
             response = None
-            command = command_line.split(',')
+            command = [c.strip() for c in command_line.split(',')]
+
             if command[0] == '$0':
                 response = ['$0']
             elif command[0] == '$1':
@@ -79,7 +78,7 @@ class MockSerial(object):
             elif command[0] == '$2':
                 self.setpoint_speed = max(min(int(command[1]), -200), 200)
                 self.setpoint_dir = max(min(int(command[2]), -1800), 1800)
-                print("$2: speed=%d, dir=%d" % self.setpoint_speed, self.setpoint_dir)
+                logging.debug("$2: speed=%d, dir=%d" % self.setpoint_speed, self.setpoint_dir)
                 response = ['$2']
             elif command[0] == '$8':
                 # reset
@@ -108,10 +107,10 @@ class MockSerial(object):
                 response = ['$15', str(int(command[1]) + 1)]
             elif command[0] == '$16':
                 if int(command[1]) == 1:
-                    print("watchdog enabled")
+                    logging.debug("watchdog enabled")
                     self.use_watchdog = True
                 else:
-                    print("watchdog disabled")
+                    logging.debug("watchdog disabled")
                     self.use_watchdog = False
             elif command[0] == '$29':
                 response = ['$29', 'mock']
@@ -127,20 +126,20 @@ class MockSerial(object):
                 response = ['$60', 'labela', 'labelb']
             elif command[0] == '$90':
                 response = ['$90']
-                print("enable debug screen")
+                logging.debug("enable debug screen")
                 self.debug_screen = True
             elif command[0] == '$91':
                 response = ['$91']
-                print("disable debug screen")
+                logging.debug("disable debug screen")
                 self.debug_screen = False
             elif command[0] == '$97':
                 response = ['$97']
-                print("load values from eeprom")
+                logging.debug("load values from eeprom")
             elif command[0] == '$98':
                 response = ['$98']
-                print("save values to eeprom")
+                logging.debug("save values to eeprom")
 
             if response is not None:
                 self.outgoing.append(','.join(response))
             else:
-                print("warning: no response generated from command [%s]" % command_line)
+                logging.debug("warning: no response generated from command [%s]" % command_line)
