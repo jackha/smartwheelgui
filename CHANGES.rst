@@ -1,3 +1,21 @@
+12/9
+----
+
+- Connection and ConnectionConfig are now separate objects.
+
+- Added more options for connection config.
+
+- Config screen is now callable from main screen.
+
+- Started better layout for main screen.
+
+- First working connection with propeller (but needs work with separators).
+
+- Started logging instead of print.
+
+- Added some test configs to start off at Jacks computer.
+
+
 22/8
 ----
 
