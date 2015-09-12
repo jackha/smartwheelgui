@@ -20,16 +20,19 @@ def connected_fun(func):
     return fun
 
 
-class SmartModule(object):
+class SWM(object):
     """
-    SmartModule: SmartWheel (or other serial object) python binding
+    Smart wheel module: SmartWheel (or other serial object) python binding
 
     The class uses threads for read and write separately, and a semaphore to 
     prevent events to happen simultaneous.
     """
-    CMD_RESET = '$8\r\n'
-    CMD_ENABLE = '$1\r\n'
-    CMD_DISABLE = '$0\r\n'
+    CMD_RESET = '$8'
+    CMD_ENABLE = '$1'
+    CMD_DISABLE = '$0'
+
+    SEPARATOR = '|'
+    CR = '\r\n'    
 
     def __init__(self, connection):
         #port, baudrate, timeout=10, name='', serial_wrapper=Serial):
@@ -83,7 +86,11 @@ class SmartModule(object):
                 if new_read:
                     data_decoded = new_read.decode('utf-8')
                     logging.debug("Read: %s" % data_decoded)
-                    self.incoming.append(data_decoded)
+                    data_items = data_decoded.split(self.SEPARATOR)
+                    for item in data_items:
+                        cleaned_item = item.strip()
+                        if cleaned_item:
+                            self.incoming.append(cleaned_item)
                 else:
                     #print('.')
                     pass
@@ -103,7 +110,7 @@ class SmartModule(object):
                 #try:
                     logging.debug("going to write '%s'" % write_item)
                     # let's hope this never crashes
-                    self.connection.connection.write(bytes(write_item, 'UTF-8'))  
+                    self.connection.connection.write(bytes(write_item + self.CR, 'UTF-8'))  
                 #except:
                 #    self.message("OOPS, serial write failed")
                 #self.semaphore.release()

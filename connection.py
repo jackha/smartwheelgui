@@ -91,6 +91,7 @@ class Connection(object):
     It contains a connection_class and conf, connect using 'connect' and you 
     will get a connection
     """
+
     def __init__(self):
         self.conf = None
         self.connection_class = None

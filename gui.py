@@ -18,7 +18,7 @@ import time
 import threading
 import logging
 
-from smart_module import SmartModule
+from swm import SWM
 from connection import NotConnectedException
 from config import config_main
 
@@ -308,7 +308,7 @@ def main():
 
     smart_modules = []
     for filename in ['testconf1.json', 'testconf2.json', 'testconf3.json']:
-        new_sm = SmartModule.from_config(filename)
+        new_sm = SWM.from_config(filename)
         smart_modules.append(new_sm)
 
     interface = Interface(root, smart_modules)
