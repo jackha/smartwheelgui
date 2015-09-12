@@ -84,7 +84,8 @@ class SWM(object):
             if self.connection.is_connected():
                 new_read = self.connection.connection.readline()  # let's hope this never crashes
                 if new_read:
-                    data_decoded = new_read.decode('utf-8')
+                    # data_decoded = new_read.decode('utf-8')
+                    data_decoded = new_read
                     logging.debug("Read: %s" % data_decoded)
                     data_items = data_decoded.split(self.SEPARATOR)
                     for item in data_items:
@@ -110,7 +111,8 @@ class SWM(object):
                 #try:
                     logging.debug("going to write '%s'" % write_item)
                     # let's hope this never crashes
-                    self.connection.connection.write(bytes(write_item + self.CR, 'UTF-8'))  
+                    # self.connection.connection.write(bytes(write_item + self.CR, 'UTF-8'))  
+                    self.connection.connection.write(write_item + self.CR)
                 #except:
                 #    self.message("OOPS, serial write failed")
                 #self.semaphore.release()

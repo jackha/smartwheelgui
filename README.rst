@@ -13,7 +13,26 @@ new ActiveTcl
 
 https://www.python.org/download/mac/tcltk/
 
+Ubuntu / raspbian
+-----------------
 
+Install package python3-setuptools: run 
+
+    $ sudo apt-get install python3-setuptools
+
+this will give you the command easy_install3.
+
+Install pip using Python 3's setuptools: run 
+
+    $ sudo easy_install3 pip
+
+this will give you the command pip-3.2 like kev's solution.
+
+Install your PyPI packages: run 
+
+    $ sudo pip-3.2 install pyserial 
+
+    
 Features
 --------
 

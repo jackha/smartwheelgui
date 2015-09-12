@@ -132,13 +132,19 @@ class ConfigGUI(object):
     def save(self):
         """Save settings to config"""
         config = connection.ConnectionConfig()
-        config.set_var('comport', self.ports.get())
-        config.set_var('baudrate', self.baud.get())
-        # config.set_var('connection_type', self.conn_type.get())
-        config.set_var('name', self.name.get())
-
         connection_type = self.note.tab(self.note.select(), "text")
         config.set_var('connection_type', connection_type)
+
+        config.set_var('name', self.name.get())
+
+        if connection_type == connection.ConnectionConfig.CONNECTION_TYPE_SERIAL:
+            config.set_var('comport', self.ports.get())
+            config.set_var('baudrate', self.baud.get())
+        elif connection_type == connection.ConnectionConfig.CONNECTION_TYPE_ETHERNET:
+            config.set_var('ip_address', self.ip_address.get())
+            config.set_var('ethernet_port', self.ethernet_port.get())
+        elif connection_type == connection.ConnectionConfig.CONNECTION_TYPE_MOCK:
+            pass
 
         # filename = self.filename.get()
 
@@ -177,9 +183,14 @@ class ConfigGUI(object):
         self.name_var.set(config.name)
         self.note.select(self.note_idx[config.connection_type])
         # config.timeout
-        self.baud.set(config.baudrate)
-        self.ports.set(config.comport)
-
+        if config.connection_type == connection.ConnectionConfig.CONNECTION_TYPE_SERIAL:
+            self.baud.set(config.baudrate)
+            self.ports.set(config.comport)
+        elif config.connection_type == connection.ConnectionConfig.CONNECTION_TYPE_ETHERNET:
+            self.ip_address_var.set(config.ip_address)
+            self.ethernet_port_var.set(config.ethernet_port)
+        elif config.connection_type == connection.ConnectionConfig.CONNECTION_TYPE_MOCK:
+            pass
 
 def config_gui(root):
     """prepare and return gui"""
