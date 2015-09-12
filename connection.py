@@ -24,10 +24,10 @@ class ConnectionConfig(object):
 
     CONNECTION_TYPE_SERIAL = 'serial'
     CONNECTION_TYPE_MOCK = 'mock'
-    CONNECTION_TYPE_NETWORK = 'network'
+    CONNECTION_TYPE_ETHERNET = 'ethernet'
 
     CONNECTION_TYPES = [
-        CONNECTION_TYPE_SERIAL, CONNECTION_TYPE_MOCK, CONNECTION_TYPE_NETWORK]
+        CONNECTION_TYPE_SERIAL, CONNECTION_TYPE_MOCK, CONNECTION_TYPE_ETHERNET]
 
     def __init__(self):
         self.comport = None
@@ -80,8 +80,8 @@ class ConnectionConfig(object):
                 self.name, self.comport, self.baudrate, self.timeout)
         elif self.connection_type == self.CONNECTION_TYPE_MOCK:
             return "ConnectionConfig [%s]: mock timeout=%d" % (self.name, self.timeout)
-        elif self.connection_type == self.CONNECTION_TYPE_NETWORK:
-            return "ConnectionConfig [%s]: network config" % (self.name)
+        elif self.connection_type == self.CONNECTION_TYPE_ETHERNET:
+            return "ConnectionConfig [%s]: ethernet config" % (self.name)
 
 
 class Connection(object):
@@ -105,9 +105,9 @@ class Connection(object):
             result.connection_class = Serial
         elif result.conf.connection_type == ConnectionConfig.CONNECTION_TYPE_MOCK:
             result.connection_class = MockSerial
-        elif result.conf.connection_type == ConnectionConfig.CONNECTION_TYPE_NETWORK:
+        elif result.conf.connection_type == ConnectionConfig.CONNECTION_TYPE_ETHERNET:
             logger.warning(
-                "connection type 'network' not implemented yet. taking mock instead")
+                "connection type 'ethernet' not implemented yet. taking mock instead")
             result.connection_class = MockSerial
         return result  # voila, a Connection object that is ready to rock & roll
 
@@ -129,7 +129,7 @@ class Connection(object):
             logging.debug('yay')
         elif self.conf.connection_type == ConnectionConfig.CONNECTION_TYPE_MOCK:
             self.connection = self.connection_class(timeout=self.conf.timeout)
-        elif self.conf.connection_type == ConnectionConfig.CONNECTION_TYPE_NETWORK:
+        elif self.conf.connection_type == ConnectionConfig.CONNECTION_TYPE_ETHERNET:
             self.connection = self.connection_class(timeout=self.conf.timeout)
 
     def is_connected(self):
