@@ -1,7 +1,4 @@
 {
-  "connection_type": "mock", 
-  "baudrate": "9600", 
-  "comport": "/dev/cu.Bluetooth-Incoming-Port", 
-  "timeout": 1, 
+  "connection_type": "mock",
   "name": "SmartWheel [mock1]"
 }

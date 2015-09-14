@@ -69,7 +69,8 @@ class ConnectionConfig(object):
         self.ethernet_port = None
         self.connection_type = self.CONNECTION_TYPE_SERIAL
 
-    def save(self, filename='testconf1.json'):
+    def save(self, filename):
+        logging.info("Saving [%s]..." % filename)
         with open(filename, 'w') as config_file:
             name = self.name if self.name else 'SmartWheel [%s]' % self.connection_type
             if self.connection_type == self.CONNECTION_TYPE_SERIAL:
@@ -134,10 +135,10 @@ class ConnectionConfig(object):
 
     def __str__(self):
         if self.connection_type == self.CONNECTION_TYPE_SERIAL:
-            return "ConnectionConfig [%s]: serial port=%s, baudrate=%d, timeout=%d" % (
+            return "ConnectionConfig [%s]: serial port=%s, baudrate=%s, timeout=%s" % (
                 self.name, self.comport, self.baudrate, self.timeout)
         elif self.connection_type == self.CONNECTION_TYPE_MOCK:
-            return "ConnectionConfig [%s]: mock timeout=%d" % (self.name, self.timeout)
+            return "ConnectionConfig [%s]: mock timeout=%s" % (self.name, self.timeout)
         elif self.connection_type == self.CONNECTION_TYPE_ETHERNET:
             return "ConnectionConfig [%s]: ethernet ip=%s port=%s" % (
                 self.name, self.ip_address, self.ethernet_port)

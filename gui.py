@@ -20,7 +20,7 @@ import logging
 
 from swm import SWM
 from connection import NotConnectedException
-from config import config_main
+from config import config_gui
 
 
 class Interface():
@@ -227,7 +227,12 @@ class Interface():
             elif action == 'config':
                 # some config dialog, then save to smart_wheel
                 logging.info("config")
-                config_main(connection_config=smart_wheel.connection.conf)
+                config_gui(app=self, smart_wheel=smart_wheel, connection_config=smart_wheel.connection.conf)
+                # if new_config is not None:
+                #     logging.info("We've got a new config!")
+                #     smart_wheel.connection.conf = new_config
+                # else:
+                #     logging.info("No new config")
             elif action == 'wheel-config':
                 # some config dialog, then save to smart_wheel
                 logging.info("wheel config")
@@ -274,6 +279,10 @@ class Interface():
 
         except NotConnectedException as err:
             self.message(smart_wheel, 'Oops, there was an error: {}'.format(err))
+
+    def set_config(self, smart_wheel, config):
+        logging.info("New smart wheel [%s] has new config [%s]" % (smart_wheel, config))
+        smart_wheel.connection.conf = config
 
     def update_thread_fun(self, smart_wheel):
         def update_thread():

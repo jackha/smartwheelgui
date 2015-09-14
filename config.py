@@ -23,15 +23,16 @@ import logging
 from serial.tools.list_ports import comports
 
 
-class ConfigGUI(object):
+class ConfigGUI(tk.Toplevel):
 
 
-    def __init__(self, root, com_ports=[], baud_rates=[], connection_config=None):
+    def __init__(self, root, app=None, smart_wheel=None, com_ports=[], baud_rates=[], connection_config=None):
         """
         Optionally set initial state to given connection_config
         """
-
         self.root = root
+        self.app = app  # parent window, or None
+        self.smart_wheel = smart_wheel  # either a SWM object, or None
 
         mainframe = ttk.Frame(self.root, padding="5 5 12 12")
         mainframe.grid(column=0, row=0, sticky=(tk.N, tk.W, tk.E, tk.S))
@@ -41,7 +42,7 @@ class ConfigGUI(object):
 
         # a notebook is the base for tabs 
         self.note = ttk.Notebook(mainframe)
-        self.note.grid(row=0, column=0, columnspan=2)
+        self.note.grid(row=0, column=0, columnspan=5)
 
         self.note_idx = {}  # keep track of connection_type -> notebook index
         note_idx_counter = 0
@@ -126,17 +127,39 @@ class ConfigGUI(object):
         # self.filename.grid(row=row, column=1)
 
         row += 1
-        ttk.Button(mainframe, text="Load", command=self.load).grid(row=row, column=0, sticky=tk.E)
-        ttk.Button(mainframe, text="Save", command=self.save).grid(row=row, column=1, sticky=tk.E)
+        ttk.Button(mainframe, text="Revert", command=self.revert).grid(row=row, column=0, sticky=tk.E)
+        ttk.Button(mainframe, text="Load from file...", command=self.load).grid(row=row, column=1, sticky=tk.E)
+        ttk.Button(mainframe, text="Save to file...", command=self.save).grid(row=row, column=2, sticky=tk.E)
+        ttk.Button(mainframe, text="OK", command=self.close).grid(row=row, column=3, sticky=tk.E)
+        ttk.Button(mainframe, text="Cancel", command=self.cancel).grid(row=row, column=4, sticky=tk.E)
 
         #for child in mainframe.winfo_children(): 
         #    child.grid_configure(padx=5, pady=5)
+        self.config_backup = connection_config
 
         if connection_config is not None:
             self.state_from_config(connection_config)
 
-    def save(self):
-        """Save settings to config"""
+        # TODO: make this window modal
+        # mainframe.grab_set()
+        # mainframe.wait_window(mainframe)
+
+    def state_from_config(self, config):
+        """Set current state from connection_config object"""
+        self.name_var.set(config.name)
+        self.note.select(self.note_idx[config.connection_type])
+        # config.timeout
+        if config.connection_type == connection.ConnectionConfig.CONNECTION_TYPE_SERIAL:
+            self.baud.set(config.baudrate)
+            self.ports.set(config.comport)
+        elif config.connection_type == connection.ConnectionConfig.CONNECTION_TYPE_ETHERNET:
+            self.ip_address_var.set(config.ip_address)
+            self.ethernet_port_var.set(config.ethernet_port)
+        elif config.connection_type == connection.ConnectionConfig.CONNECTION_TYPE_MOCK:
+            pass
+
+    def config_from_state(self):
+        """Return config object from current window state"""
         config = connection.ConnectionConfig()
         connection_type = self.note.tab(self.note.select(), "text")
         config.set_var('connection_type', connection_type)
@@ -151,8 +174,15 @@ class ConfigGUI(object):
             config.set_var('ethernet_port', self.ethernet_port.get())
         elif connection_type == connection.ConnectionConfig.CONNECTION_TYPE_MOCK:
             pass
+        return config
 
-        # filename = self.filename.get()
+    def revert(self):
+        if self.config_backup is not None:
+            self.state_from_config(self.config_backup)
+
+    def save(self):
+        """Save settings to config"""
+        config = self.config_from_state()
 
         save_file_options = dict(
             initialdir='./', 
@@ -170,20 +200,6 @@ class ConfigGUI(object):
         # logging.info("Quitting...")
         # sys.exit(0)
 
-    def state_from_config(self, config):
-        """Set current state from connection_config object"""
-        self.name_var.set(config.name)
-        self.note.select(self.note_idx[config.connection_type])
-        # config.timeout
-        if config.connection_type == connection.ConnectionConfig.CONNECTION_TYPE_SERIAL:
-            self.baud.set(config.baudrate)
-            self.ports.set(config.comport)
-        elif config.connection_type == connection.ConnectionConfig.CONNECTION_TYPE_ETHERNET:
-            self.ip_address_var.set(config.ip_address)
-            self.ethernet_port_var.set(config.ethernet_port)
-        elif config.connection_type == connection.ConnectionConfig.CONNECTION_TYPE_MOCK:
-            pass
-
     def load(self):
         """
         Load config and set GUI to match the config
@@ -198,38 +214,51 @@ class ConfigGUI(object):
         if not filename:  # user probably clicked cancel
             return
         config = connection.ConnectionConfig.from_file(filename)
+        self.config_backup = config
         logging.info("Loaded file: %s" % filename)
 
         self.state_from_config(config)
 
+    def close(self):
+        if self.app is not None and self.smart_wheel is not None:
+            # callback in parent window
+            self.app.set_config(self.smart_wheel, self.config_from_state())  # we want to remember it
+        else:
+            logging.info(self.app)
+            logging.info(self.smart_wheel)
+            logging.info('blabla')
+        self.root.destroy()
 
-def config_gui(root, connection_config=None):
-    """prepare and return gui"""
-    # we get a list of: [port, desc, hwid], desc and hwid is seen as 'n/a'
-    com_ports = comports()  
-    if not com_ports:
-        com_ports.append(['dummy', 'n/a', 'n/a'])
-    interface = ConfigGUI(
-        root, com_ports=com_ports, 
-        baud_rates=connection.BAUDRATES,
-        connection_config=connection_config)    
-    return interface
+    def cancel(self):
+        self.root.destroy()
 
 
-def config_main(connection_config=None):
+def config_gui(app=None, smart_wheel=None, connection_config=None):
     root = tk.Tk()
     root.title("Connection config")
     root.columnconfigure(0, weight=1)
     root.rowconfigure(0, weight=1)
 
-    config_gui(root, connection_config=connection_config)
+    # we get a list of: [port, desc, hwid], desc and hwid is seen as 'n/a'
+    com_ports = comports()  
+    if not com_ports:
+        com_ports.append(['no ports found', 'n/a', 'n/a'])
+    gui = ConfigGUI(
+        root, app=app,
+        smart_wheel=smart_wheel,
+        com_ports=com_ports, 
+        baud_rates=connection.BAUDRATES,
+        connection_config=connection_config) 
 
     root.mainloop()
+    logging.info("Config is done: [%s]" % str(gui.config_backup))
+    return gui.config_backup
 
 
 if __name__ == '__main__':
     # TODO: read filename from command line arguments.
     #logging.basicConfig(filename='config.log', level=logging.DEBUG)
+    root = tk.Tk()
     logging.basicConfig(level=logging.DEBUG)  # no file, only console
     logging.info("Connection config tool")
-    config_main()  
+    config_gui(root)  
