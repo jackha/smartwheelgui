@@ -26,7 +26,10 @@ from serial.tools.list_ports import comports
 class ConfigGUI(object):
 
 
-    def __init__(self, root, com_ports=[], baud_rates=[]):
+    def __init__(self, root, com_ports=[], baud_rates=[], connection_config=None):
+        """
+        Optionally set initial state to given connection_config
+        """
 
         self.root = root
 
@@ -129,6 +132,9 @@ class ConfigGUI(object):
         #for child in mainframe.winfo_children(): 
         #    child.grid_configure(padx=5, pady=5)
 
+        if connection_config is not None:
+            self.state_from_config(connection_config)
+
     def save(self):
         """Save settings to config"""
         config = connection.ConnectionConfig()
@@ -164,6 +170,20 @@ class ConfigGUI(object):
         # logging.info("Quitting...")
         # sys.exit(0)
 
+    def state_from_config(self, config):
+        """Set current state from connection_config object"""
+        self.name_var.set(config.name)
+        self.note.select(self.note_idx[config.connection_type])
+        # config.timeout
+        if config.connection_type == connection.ConnectionConfig.CONNECTION_TYPE_SERIAL:
+            self.baud.set(config.baudrate)
+            self.ports.set(config.comport)
+        elif config.connection_type == connection.ConnectionConfig.CONNECTION_TYPE_ETHERNET:
+            self.ip_address_var.set(config.ip_address)
+            self.ethernet_port_var.set(config.ethernet_port)
+        elif config.connection_type == connection.ConnectionConfig.CONNECTION_TYPE_MOCK:
+            pass
+
     def load(self):
         """
         Load config and set GUI to match the config
@@ -180,19 +200,10 @@ class ConfigGUI(object):
         config = connection.ConnectionConfig.from_file(filename)
         logging.info("Loaded file: %s" % filename)
 
-        self.name_var.set(config.name)
-        self.note.select(self.note_idx[config.connection_type])
-        # config.timeout
-        if config.connection_type == connection.ConnectionConfig.CONNECTION_TYPE_SERIAL:
-            self.baud.set(config.baudrate)
-            self.ports.set(config.comport)
-        elif config.connection_type == connection.ConnectionConfig.CONNECTION_TYPE_ETHERNET:
-            self.ip_address_var.set(config.ip_address)
-            self.ethernet_port_var.set(config.ethernet_port)
-        elif config.connection_type == connection.ConnectionConfig.CONNECTION_TYPE_MOCK:
-            pass
+        self.state_from_config(config)
 
-def config_gui(root):
+
+def config_gui(root, connection_config=None):
     """prepare and return gui"""
     # we get a list of: [port, desc, hwid], desc and hwid is seen as 'n/a'
     com_ports = comports()  
@@ -200,22 +211,24 @@ def config_gui(root):
         com_ports.append(['dummy', 'n/a', 'n/a'])
     interface = ConfigGUI(
         root, com_ports=com_ports, 
-        baud_rates=connection.BAUDRATES)    
+        baud_rates=connection.BAUDRATES,
+        connection_config=connection_config)    
     return interface
 
 
-def config_main():
+def config_main(connection_config=None):
     root = tk.Tk()
     root.title("Connection config")
     root.columnconfigure(0, weight=1)
     root.rowconfigure(0, weight=1)
 
-    config_gui(root)
+    config_gui(root, connection_config=connection_config)
 
     root.mainloop()
 
 
 if __name__ == '__main__':
+    # TODO: read filename from command line arguments.
     #logging.basicConfig(filename='config.log', level=logging.DEBUG)
     logging.basicConfig(level=logging.DEBUG)  # no file, only console
     logging.info("Connection config tool")

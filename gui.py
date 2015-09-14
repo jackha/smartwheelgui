@@ -227,7 +227,7 @@ class Interface():
             elif action == 'config':
                 # some config dialog, then save to smart_wheel
                 logging.info("config")
-                config_main()
+                config_main(connection_config=smart_wheel.connection.conf)
             elif action == 'wheel-config':
                 # some config dialog, then save to smart_wheel
                 logging.info("wheel config")
@@ -307,9 +307,12 @@ def main():
     root.title("SmartWheel")
 
     smart_modules = []
-    for filename in ['testconf1.json', 'testconf2.json', 'testconf3.json']:
-        new_sm = SWM.from_config(filename)
-        smart_modules.append(new_sm)
+    for filename in ['testconf1.json', 'testconf2.json', 'propeller.json']:
+        try:
+            new_sm = SWM.from_config(filename)
+            smart_modules.append(new_sm)
+        except:
+            logging.exception('smart module instance failed')
 
     interface = Interface(root, smart_modules)
 
