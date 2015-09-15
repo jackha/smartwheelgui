@@ -139,17 +139,6 @@ class Interface():
                 ).grid(row=label_frame_row, column=2)
 
             label_frame_row += 1
-
-            # connection_label_var = tk.StringVar()
-            # connection_label_var.set(smart_wheel.connection.conf.name)
-            # self.gui_elements[smart_wheel.name]['connection_label_var'] = connection_label_var
-            # # TODO: when binding textvariable, it sometimes gives an error on quitting... strange!
-            # connection_label = ttk.Label(
-            #     label_frame_connection, 
-            #     textvariable=self.gui_elements[smart_wheel.name]['connection_label_var']
-            #     #text=smart_wheel.connection.conf.name
-            #     )
-            # connection_label.grid(row=label_frame_row, column=0, columnspan=3)
             label = smart_wheel.create_label(
                 label_frame_connection, 'connection_name_label', smart_wheel.connection.conf.name)
             label.grid(row=label_frame_row, column=0, columnspan=3)
