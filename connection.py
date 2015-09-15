@@ -175,7 +175,7 @@ class Connection(object):
 
     def connect(self):
         """
-        create connecion instance
+        create connection instance
         """
         if self.conf.connection_type == ConnectionConfig.CONNECTION_TYPE_SERIAL:
             logging.debug("port=%s" % self.conf.comport)
