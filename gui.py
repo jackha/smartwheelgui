@@ -93,6 +93,7 @@ class Interface():
         mainframe.grid(column=0, row=0, sticky=(tk.N, tk.W, tk.E, tk.S))
         mainframe.columnconfigure(0, weight=1)
         mainframe.rowconfigure(0, weight=1)
+        self.mainframe = mainframe
 
         # top menu
         menu = tk.Menu(self.root)
@@ -303,12 +304,10 @@ class Interface():
                 # some config dialog, then save to smart_wheel
                 logger.info("config")
                 # the config_gui will call set_config
-                config_gui(app=self, smart_wheel=smart_wheel, connection_config=smart_wheel.connection.conf)
-                # if new_config is not None:
-                #     logger.info("We've got a new config!")
-                #     smart_wheel.connection.conf = new_config
-                # else:
-                #     logger.info("No new config")
+                config_gui(
+                    self.root, 
+                    parent=self, smart_wheel=smart_wheel, 
+                    connection_config=smart_wheel.connection.conf)
             elif action == 'wheel-config':
                 # some config dialog, then save to smart_wheel
                 logger.info("wheel config")
@@ -360,6 +359,9 @@ class Interface():
         logger.info("New smart wheel [%s] has new config [%s]" % (smart_wheel, config))
         smart_wheel.connection.conf = config
         smart_wheel.set_label('connection_name_label', config.name)
+
+    # def close_me(self, target):
+    #     target.destroy()
 
     def update_thread_fun(self, smart_wheel):
         """Thread for listening a specific smart wheel module"""
