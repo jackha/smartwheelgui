@@ -1,0 +1,6 @@
+{
+  "ip_address": "127.0.0.1",
+  "ethernet_port": "5000",
+  "connection_type": "ethernet",
+  "name": "ethernet"
+}

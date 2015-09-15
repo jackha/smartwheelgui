@@ -1,0 +1,7 @@
+{
+  "connection_type": "serial", 
+  "baudrate": "115200", 
+  "comport": "/dev/cu.usbserial-DAYO2UPE", 
+  "timeout": 1, 
+  "name": "Propeller"
+}
