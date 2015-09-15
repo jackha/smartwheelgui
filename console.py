@@ -2,6 +2,9 @@
 console.py
 
 a console for smart wheel module 
+
+usage: console.py [-h] [--port PORT] connection_config_filename
+
 """
 import argparse
 import signal
