@@ -199,6 +199,9 @@ class ConfigGUI(tk.Toplevel):
         logging.info("Saved file: %s" % filename)
         # logging.info("Quitting...")
         # sys.exit(0)
+        if self.app is not None and self.smart_wheel is not None:
+            # callback in parent window
+            self.app.set_config(self.smart_wheel, self.config_from_state())  # we want to remember it
 
     def load(self):
         """
@@ -223,10 +226,7 @@ class ConfigGUI(tk.Toplevel):
         if self.app is not None and self.smart_wheel is not None:
             # callback in parent window
             self.app.set_config(self.smart_wheel, self.config_from_state())  # we want to remember it
-        else:
-            logging.info(self.app)
-            logging.info(self.smart_wheel)
-            logging.info('blabla')
+
         self.root.destroy()
 
     def cancel(self):
@@ -258,7 +258,7 @@ def config_gui(app=None, smart_wheel=None, connection_config=None):
 if __name__ == '__main__':
     # TODO: read filename from command line arguments.
     #logging.basicConfig(filename='config.log', level=logging.DEBUG)
-    root = tk.Tk()
+    # root = tk.Tk()
     logging.basicConfig(level=logging.DEBUG)  # no file, only console
     logging.info("Connection config tool")
-    config_gui(root)  
+    config_gui()  

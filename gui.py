@@ -22,6 +22,8 @@ from swm import SWM
 from connection import NotConnectedException
 from config import config_gui
 
+logger = logging.getLogger(__name__)
+
 
 class Interface():
     TEXT_CONNECT = 'Connect'
@@ -38,11 +40,20 @@ class Interface():
         self.i_wanna_live = True
 
         self.root = root
-        mainframe = ttk.Frame(root, padding="3 3 12 12")
+        mainframe = ttk.Frame(root)
+        # mainframe = ttk.Frame(root, padding="3 3 12 12")
         mainframe.grid(column=0, row=0, sticky=(tk.N, tk.W, tk.E, tk.S))
         mainframe.columnconfigure(0, weight=1)
         mainframe.rowconfigure(0, weight=1)
 
+        # top menu
+        menu = tk.Menu(self.root)
+        self.root.config(menu=menu)
+        menu_file = tk.Menu(menu)
+        menu.add_cascade(label='File', menu=menu_file)
+        menu_file.add_command(label='New Wheel', command=self.new_wheel)
+        
+        # tabs
         note = ttk.Notebook(mainframe)
         note.grid(row=0, column=0)
 
@@ -66,22 +77,32 @@ class Interface():
             label_frame_connection.grid(row=row, column=0, columnspan=4, sticky="nsew")
             #label_frame_connection.columnconfigure(0, weight=1)
             
+            label_frame_row = 0
             ttk.Button(
                 label_frame_connection, text='Connect', 
                 command=self.button_fun(smart_wheel, new_tab, 'connect')
-                ).grid(row=0, column=0)
+                ).grid(row=label_frame_row, column=0)
             ttk.Button(
                 label_frame_connection, text='Reset', 
                 command=self.button_fun(smart_wheel, new_tab, 'reset')
-                ).grid(row=0, column=1)
+                ).grid(row=label_frame_row, column=1)
             ttk.Button(
                 label_frame_connection, text='Config', 
                 command=self.button_fun(smart_wheel, new_tab, 'config')
-                ).grid(row=0, column=2)
+                ).grid(row=label_frame_row, column=2)
+
+            label_frame_row += 1
+
+            connection_label_var = tk.StringVar()
+            connection_label_var.set(smart_wheel.connection.conf.name)
+            self.gui_elements[smart_wheel.name]['connection_label_var'] = connection_label_var
+            # TODO: when binding textvariable, it will give an error on quitting... strange!
             connection_label = ttk.Label(
                 label_frame_connection, 
-                text=smart_wheel.connection.conf.name + 'alalala')
-            connection_label.grid(row=0, column=3)
+                # textvariable=self.gui_elements[smart_wheel.name]['connection_label_var']
+                text=smart_wheel.connection.conf.name
+                )
+            connection_label.grid(row=label_frame_row, column=0, columnspan=3)
 
             # Connection
             row += 1
@@ -97,15 +118,7 @@ class Interface():
                 label_frame_wheel, text='Disable', 
                 command=self.button_fun(smart_wheel, new_tab, 'disable')
                 ).grid(row=0, column=1)
-            ttk.Button(
-                label_frame_wheel, text='Config', 
-                command=self.button_fun(smart_wheel, new_tab, 'wheel-config')
-                ).grid(row=0, column=2)
-            wheel_label = ttk.Label(
-                label_frame_wheel, 
-                text=smart_wheel.name)
-            wheel_label.grid(row=0, column=3)
-            
+
             # pw.add(label_frame_connection, weight=50)
             # pw.add(label_frame_wheel, weight=50)
             # # pw.pack(fill='both', expand=True)
@@ -179,23 +192,45 @@ class Interface():
                 row=row, column=1, columnspan=3, rowspan=3)
             self.gui_elements[smart_wheel.name]['output_field'] = output_field
 
-            update_thread = threading.Thread(target=self.update_thread_fun(smart_wheel))
-            update_thread.start()
+            # status bar
+            row += 1
+            status_var = tk.StringVar()
+            status_var.set("Status info")
+            self.gui_elements[smart_wheel.name]['status_var'] = status_var
+            # if 
+            status = tk.Label(
+                mainframe, 
+                #textvariable=self.gui_elements[smart_wheel.name]['status_var'],
+                textvariable=status_var,
+                text="Status infooo",
+                bd=1, relief=tk.SUNKEN, anchor=tk.W)
+            status.grid(row=row, column=0, columnspan=3)
+            #self.gui_elements[smart_wheel.name]['status'] = status
+            #status.pack(side=tk.BOTTOM)
 
             # self.tabs.append(new_tab)
             note.add(new_tab, text="%d %s" % (i, smart_wheel.name))
 
+            update_thread = threading.Thread(target=self.update_thread_fun(smart_wheel))
+            update_thread.start()
+
         # for child in mainframe.winfo_children(): 
         #     child.grid_configure(padx=5, pady=5)
 
+    def new_wheel(self):
+        """
+        Add new wheel
+        """
+        logger.info('Add new wheel')
+
     def handle_command(self, smart_wheel, tab, event):
         command = self.gui_elements[smart_wheel.name]['input_field'].get()
-        logging.debug("Handle: %s" % command)
+        logger.debug("Handle: %s" % command)
         try:
             result = smart_wheel.command(command + '\r\n')
             self.message(smart_wheel, '-> [%s]' % result.strip())
         except NotConnectedException as ex:
-            logging.exception("You're not connected yet.")
+            logger.exception("You're not connected yet.")
             self.message(smart_wheel, 'ERROR, you are not connected.')
 
     def event_fun(self, smart_wheel, tab):
@@ -226,16 +261,17 @@ class Interface():
                 # self.gui_elements[smart_wheel.name]['connect_btn'].textvariable = tk.StringVar(self.root, self.TEXT_DISCONNECT)
             elif action == 'config':
                 # some config dialog, then save to smart_wheel
-                logging.info("config")
+                logger.info("config")
+                # the config_gui will call set_config
                 config_gui(app=self, smart_wheel=smart_wheel, connection_config=smart_wheel.connection.conf)
                 # if new_config is not None:
-                #     logging.info("We've got a new config!")
+                #     logger.info("We've got a new config!")
                 #     smart_wheel.connection.conf = new_config
                 # else:
-                #     logging.info("No new config")
+                #     logger.info("No new config")
             elif action == 'wheel-config':
                 # some config dialog, then save to smart_wheel
-                logging.info("wheel config")
+                logger.info("wheel config")
                 
             elif action == 'enable':
                 # check the status, then enable or disable
@@ -281,7 +317,7 @@ class Interface():
             self.message(smart_wheel, 'Oops, there was an error: {}'.format(err))
 
     def set_config(self, smart_wheel, config):
-        logging.info("New smart wheel [%s] has new config [%s]" % (smart_wheel, config))
+        logger.info("New smart wheel [%s] has new config [%s]" % (smart_wheel, config))
         smart_wheel.connection.conf = config
 
     def update_thread_fun(self, smart_wheel):
@@ -321,7 +357,7 @@ def main():
             new_sm = SWM.from_config(filename)
             smart_modules.append(new_sm)
         except:
-            logging.exception('smart module instance failed')
+            logger.exception('smart module instance failed')
 
     interface = Interface(root, smart_modules)
 
