@@ -25,6 +25,54 @@ from config import config_gui
 logger = logging.getLogger(__name__)
 
 
+class SWMGuiElements(SWM):
+    """
+    Smart Wheel Module with Interface elements (with corresponding values).
+    """
+    def __init__(self, *args, **kwargs):
+        super(SWMGuiElements, self).__init__(*args, **kwargs)
+        self.elements = {}  # organize elements by key
+
+    def set_elem(self, elem_name, elem_value):
+        self.elements[elem_name] = elem_value
+
+    def get_elem(self, elem_name):
+        return self.elements[elem_name]
+
+    def create_label(self, frame, elem_name, elem_value, label_args={}):
+        """
+        make a label with corresponding StringVar and return it
+
+        StringVar: so we can change the contents
+        """
+        elem_var_name = '%s_var' % elem_name
+        _var = tk.StringVar()
+        _var.set(elem_value)
+        self.elements[elem_var_name] = _var
+        
+        label = ttk.Label(
+            frame, 
+            textvariable=self.elements[elem_var_name],
+            **label_args
+            )
+        self.elements[elem_name] = label
+        return label
+
+    def set_label(self, elem_name, elem_value):
+        """
+        Set a new value for a label
+        """
+        elem_var_name = '%s_var' % elem_name
+        self.elements[elem_var_name].set(elem_value)
+
+    def get_label(self, elem_name):
+        """
+        Get value for a label
+        """
+        elem_var_name = '%s_var' % elem_name
+        return self.elements[elem_var_name].get()
+
+
 class Interface():
     TEXT_CONNECT = 'Connect'
     TEXT_DISCONNECT = 'Disconnect'
@@ -34,7 +82,7 @@ class Interface():
     def __init__(self, root, smart_wheels):
         """Interface for SmartWheels, 
 
-        makes an interface for a list of sw_configs
+        makes an interface for a list of SWMGuiElements objects.
         """
         # super(Interface, self).__init__(root)
         self.i_wanna_live = True
@@ -52,20 +100,19 @@ class Interface():
         menu_file = tk.Menu(menu)
         menu.add_cascade(label='File', menu=menu_file)
         menu_file.add_command(label='New Wheel', command=self.new_wheel)
+        menu_file.add_command(label='Quit', command=self.quit)
         
         # tabs
         note = ttk.Notebook(mainframe)
         note.grid(row=0, column=0)
 
+        self.smart_wheels = smart_wheels
         self.gui_elements = {}
-        self.tabs = {}
-
-        #self.tabs = []
+        
         for i, smart_wheel in enumerate(smart_wheels):  # every smart_wheel must have a unique name
             self.gui_elements[smart_wheel.name] = {}
             new_tab = ttk.Frame(note)
-            self.tabs[smart_wheel.name] = new_tab
-
+            
             row = 0
             ttk.Label(new_tab, text=smart_wheel.name).grid(row=row, column=0, columnspan=3)
 
@@ -93,16 +140,19 @@ class Interface():
 
             label_frame_row += 1
 
-            connection_label_var = tk.StringVar()
-            connection_label_var.set(smart_wheel.connection.conf.name)
-            self.gui_elements[smart_wheel.name]['connection_label_var'] = connection_label_var
-            # TODO: when binding textvariable, it will give an error on quitting... strange!
-            connection_label = ttk.Label(
-                label_frame_connection, 
-                # textvariable=self.gui_elements[smart_wheel.name]['connection_label_var']
-                text=smart_wheel.connection.conf.name
-                )
-            connection_label.grid(row=label_frame_row, column=0, columnspan=3)
+            # connection_label_var = tk.StringVar()
+            # connection_label_var.set(smart_wheel.connection.conf.name)
+            # self.gui_elements[smart_wheel.name]['connection_label_var'] = connection_label_var
+            # # TODO: when binding textvariable, it sometimes gives an error on quitting... strange!
+            # connection_label = ttk.Label(
+            #     label_frame_connection, 
+            #     textvariable=self.gui_elements[smart_wheel.name]['connection_label_var']
+            #     #text=smart_wheel.connection.conf.name
+            #     )
+            # connection_label.grid(row=label_frame_row, column=0, columnspan=3)
+            label = smart_wheel.create_label(
+                label_frame_connection, 'connection_name_label', smart_wheel.connection.conf.name)
+            label.grid(row=label_frame_row, column=0, columnspan=3)
 
             # Connection
             row += 1
@@ -194,23 +244,14 @@ class Interface():
 
             # status bar
             row += 1
-            status_var = tk.StringVar()
-            status_var.set("Status info")
-            self.gui_elements[smart_wheel.name]['status_var'] = status_var
-            # if 
-            status = tk.Label(
-                mainframe, 
-                #textvariable=self.gui_elements[smart_wheel.name]['status_var'],
-                textvariable=status_var,
-                text="Status infooo",
-                bd=1, relief=tk.SUNKEN, anchor=tk.W)
-            status.grid(row=row, column=0, columnspan=3)
-            #self.gui_elements[smart_wheel.name]['status'] = status
-            #status.pack(side=tk.BOTTOM)
-
-            # self.tabs.append(new_tab)
+            status = smart_wheel.create_label(
+                mainframe, 'status', 'status info', 
+                label_args=dict(relief=tk.SUNKEN, anchor=tk.W))
+            status.grid(row=row, column=0)
+            
             note.add(new_tab, text="%d %s" % (i, smart_wheel.name))
 
+            # start a thread for listening the smart wheel
             update_thread = threading.Thread(target=self.update_thread_fun(smart_wheel))
             update_thread.start()
 
@@ -222,6 +263,16 @@ class Interface():
         Add new wheel
         """
         logger.info('Add new wheel')
+
+    def quit(self):
+        """
+        Add new wheel
+        """
+        logger.info('Quit')
+        self.i_wanna_live = False
+        for swm in self.smart_wheels:
+            swm.shut_down()
+        self.root.quit()
 
     def handle_command(self, smart_wheel, tab, event):
         command = self.gui_elements[smart_wheel.name]['input_field'].get()
@@ -319,14 +370,16 @@ class Interface():
     def set_config(self, smart_wheel, config):
         logger.info("New smart wheel [%s] has new config [%s]" % (smart_wheel, config))
         smart_wheel.connection.conf = config
+        smart_wheel.set_label('connection_name_label', config.name)
 
     def update_thread_fun(self, smart_wheel):
+        """Thread for listening a specific smart wheel module"""
         def update_thread():
             while self.i_wanna_live:
                 while smart_wheel.incoming:
                     new_message = smart_wheel.incoming.pop(0)
                     self.message(smart_wheel, '<- [%s]' % new_message)
-                time.sleep(0.001)
+                time.sleep(0.01)
         return update_thread
 
     def button_fun(self, smart_wheel, tab, action):
@@ -340,10 +393,6 @@ class Interface():
     def message(self, smart_wheel, msg):
         self.gui_elements[smart_wheel.name]['output_field'].insert('end -1 chars', msg + '\n')
 
-    # def close_window(self):
-    #     print("close!")
-    #     super(Interface, self).close_window()
-
 
 def main():
     logging.basicConfig(level=logging.DEBUG)  # no file, only console
@@ -354,21 +403,14 @@ def main():
     smart_modules = []
     for filename in ['testconf1.json', 'testconf2.json', 'propeller.json']:
         try:
-            new_sm = SWM.from_config(filename)
+            new_sm = SWMGuiElements.from_config(filename)
             smart_modules.append(new_sm)
         except:
             logger.exception('smart module instance failed')
 
     interface = Interface(root, smart_modules)
 
-    def on_close():
-        root.destroy()
-        # shut down smart modules
-        for sm in smart_modules:
-            sm.shut_down()
-        interface.i_wanna_live = False
-
-    root.protocol("WM_DELETE_WINDOW", on_close)  # close window
+    root.protocol("WM_DELETE_WINDOW", interface.quit)  # close window
     root.mainloop()
 
 
