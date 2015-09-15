@@ -20,6 +20,8 @@ class NotConnectedException(Exception):
 
 class SocketWrapper(socket.socket):
     """All the functions readline and write"""
+    CR = '\r\n'
+
     def readline(self):
         result = self.recv(1024)
         if result:
@@ -29,13 +31,15 @@ class SocketWrapper(socket.socket):
 
     def write(self, s):
         logging.debug('Writing [%s]...' % s)
-        self.send(bytes(s, 'UTF-8'))
+        self.send(bytes(s + self.CR, 'UTF-8'))
 
 
 class SerialWrapper(Serial):
     """
     Wrapper includes coding and decoding to/from utf-8
     """
+    CR = '\r\n'
+
     def readline(self):
         result = super(SerialWrapper, self).readline()
         if result:
@@ -44,7 +48,7 @@ class SerialWrapper(Serial):
             return result
 
     def write(self, s):
-        super(SerialWrapper, self).write(bytes(s, 'UTF-8'))
+        super(SerialWrapper, self).write(bytes(s + self.CR, 'UTF-8'))
 
 
 

@@ -31,8 +31,7 @@ class SWM(object):
     CMD_ENABLE = '$1'
     CMD_DISABLE = '$0'
 
-    SEPARATOR = '|'
-    CR = '\r\n'    
+    SEPARATOR = '|'    
 
     def __init__(self, connection):
         #port, baudrate, timeout=10, name='', serial_wrapper=Serial):
@@ -112,7 +111,7 @@ class SWM(object):
                     logging.debug("going to write '%s'" % write_item)
                     # let's hope this never crashes
                     # self.connection.connection.write(bytes(write_item + self.CR, 'UTF-8'))  
-                    self.connection.connection.write(write_item + self.CR)
+                    self.connection.connection.write(write_item)
                 #except:
                 #    self.message("OOPS, serial write failed")
                 #self.semaphore.release()
