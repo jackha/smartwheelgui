@@ -91,7 +91,7 @@ class SWM(object):
                         for item in data_items:
                             cleaned_item = item.strip()
                             if cleaned_item:
-                                self.incoming.append(cleaned_item)
+                                self.incoming.append(cleaned_item.split(','))
             except:
                 if self.connection.connection is None:
                     continue

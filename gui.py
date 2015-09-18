@@ -29,7 +29,8 @@ GREY = '#777'
 
 # 
 UPDATE_TIME = 0.01
-UPDATE_TIME_RAW = 0.5
+UPDATE_TIME_SLOW = 0.5
+UPDATE_TIME_VERY_SLOW = 3
 
 
 class SWMGuiElements(SWM):
@@ -284,7 +285,7 @@ class Interface():
             #ttk.Label(new_tab, text="200").grid(row=row, column=1)
             label = smart_wheel.create_label(
                 new_tab, self.GUI_SPEED_SET_POINT, 
-                '-')
+                str(self.speed_set_point))
             label.grid(row=row, column=1)
             label = smart_wheel.create_label(
                 new_tab, self.GUI_SPEED_ACTUAL, 
@@ -295,7 +296,7 @@ class Interface():
             ttk.Label(new_tab, text="Steer").grid(row=row, column=0)
             label = smart_wheel.create_label(
                 new_tab, self.GUI_STEER_SET_POINT, 
-                '-')
+                str(self.steer_set_point))
             label.grid(row=row, column=1)
             label = smart_wheel.create_label(
                 new_tab, self.GUI_STEER_ACTUAL, 
@@ -503,22 +504,28 @@ class Interface():
     def update_thread_fun(self, smart_wheel):
         """Thread for listening a specific smart wheel module"""
         def update_thread():
-            last_raw_update = time.time()
+            last_slow_update = time.time()
+            last_very_slow_update = time.time()
             while self.i_wanna_live:
                 while smart_wheel.incoming:
                     new_message = smart_wheel.incoming.pop(0)
-                    self.message(smart_wheel, '<- [%s]' % new_message)
+                    self.message(smart_wheel, '<- %s' % new_message)
+                    if new_message[0] == '$13':
+                        # $13, actual wheel position, actual wheel speed, actual steer position, actual steer<CR>
+                        smart_wheel.set_label(self.GUI_SPEED_ACTUAL, str(new_message[2]))
+                        smart_wheel.set_label(self.GUI_STEER_ACTUAL, str(new_message[4]))
                 
                 # somehow, doing this too often freezes the 'quit' function. probably due to some queue
                 check_time = time.time()
-                if check_time - last_raw_update > UPDATE_TIME_RAW:
+                if check_time - last_slow_update > UPDATE_TIME_SLOW:
                     smart_wheel.set_label(self.GUI_CONNECTION_STATUS, smart_wheel.connection.status())
-                    last_raw_update = check_time
+                    last_slow_update = check_time
 
-                    # wheel status
-                    # $13, actual wheel position, actual wheel speed, actual steer position, actual steer<CR>
+                if check_time - last_very_slow_update > UPDATE_TIME_VERY_SLOW:
+                    # poll wheel status
                     if smart_wheel.is_connected():
                         smart_wheel.command('$13')
+                    last_very_slow_update = check_time
 
                 time.sleep(UPDATE_TIME)
         return update_thread
