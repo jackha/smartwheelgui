@@ -23,7 +23,7 @@ import logging
 from serial.tools.list_ports import comports
 
 
-class ConfigGUI(tk.Toplevel):
+class ConfigGUI(object):
 
 
     def __init__(

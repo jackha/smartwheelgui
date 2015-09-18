@@ -125,10 +125,13 @@ class SWM(object):
         logging.debug(str(self.connection))
         # self.serial = self.serial_wrapper(
         #     self.serial_port, self.baudrate, timeout=self.timeout)  # '/dev/ttyS1', 19200, timeout=1
-        self.connection.connect()  # will create connection.connection
+        return self.connection.connect()  # will create connection.connection
 
     def disconnect(self):
-        self.connection.disconnect()
+        return self.connection.disconnect()
+
+    def is_connected(self):
+        return self.connection.is_connected()
 
     def status(self):
         # TODO: return status of smartwheel as dict
@@ -159,7 +162,7 @@ class SWM(object):
 
     @connected_fun
     def command(self, cmd):
-        self.message("Command: %s" % cmd)
+        self.message("Command: %s" % cmd, logging_only=True)
         self.write_queue.append(cmd)
         return cmd
 
@@ -170,7 +173,8 @@ class SWM(object):
         self.message("shut down issued")
         self.i_wanna_live = False
 
-    def message(self, msg):
+    def message(self, msg, logging_only=False):
         logging.debug("[%s] %s" % (str(self), msg))
-        for callback_fun in self.report_to:
-            callback_fun(self, "[%s] %s" % (str(self), msg))
+        if not logging_only:
+            for callback_fun in self.report_to:
+                callback_fun(self, "[%s] %s" % (str(self), msg))
