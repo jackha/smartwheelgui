@@ -9,7 +9,7 @@ try:
     import Tkinter as tk
     # from Tkinter import *
     import ttk
-    from Tkinter import filedialog
+    import tkFileDialog as filedialog
 except ImportError:
     import tkinter as tk
     import tkinter.ttk as ttk
@@ -38,9 +38,9 @@ class ConfigGUI(tk.Toplevel):
 
         mainframe = ttk.Frame(self.root, padding="5 5 12 12")
         mainframe.grid(column=0, row=0, sticky=(tk.N, tk.W, tk.E, tk.S))
-        mainframe.columnconfigure(0, weight=0)
+        mainframe.columnconfigure(0, weight=1)
         mainframe.columnconfigure(1, weight=1)
-        mainframe.rowconfigure(0, weight=0)
+        mainframe.rowconfigure(0, weight=1)
 
         # a notebook is the base for tabs 
         self.note = ttk.Notebook(mainframe)

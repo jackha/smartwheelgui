@@ -4,9 +4,12 @@ import logging
 import json
 import serial
 import socket
+import threading
 
 from serial import Serial
 from mock_serial import MockSerial
+from socket import error as socket_error
+from socket import errno as socket_errno
 
 logger = logging.getLogger(__name__)
 
@@ -22,8 +25,21 @@ class SocketWrapper(socket.socket):
     """All the functions readline and write"""
     CR = '\r\n'
 
+    def __init__(self, *args, **kwargs):
+        super(SocketWrapper, self).__init__(*args, **kwargs)
+        self.last_error = ''
+
+    def get_and_erase_last_error(self):
+        result = self.last_error
+        self.last_error = ''
+        return result
+
     def readline(self):
-        result = self.recv(1024)
+        try:
+            result = self.recv(1024)
+        except socket_error as serr:
+            self.last_error = 'connection error (%s).' % socket_errno.errorcode[serr.errno]
+            raise serr
         if result:
             return result.decode('UTF-8')
         else:
@@ -31,7 +47,15 @@ class SocketWrapper(socket.socket):
 
     def write(self, s):
         logging.debug('Writing [%s]...' % s)
-        self.send(bytes(s + self.CR, 'UTF-8'))
+        try:
+            self.send(bytes(s + self.CR, 'UTF-8'))
+        except socket_error as serr:
+            self.last_error = 'connection error (%s).' % socket_errno.errorcode[serr.errno]
+            raise serr
+
+    def disconnect(self):
+        self.shutdown(socket.SHUT_RDWR)
+        self.close()
 
 
 class SerialWrapper(Serial):
@@ -40,16 +64,42 @@ class SerialWrapper(Serial):
     """
     CR = '\r\n'
 
+    def __init__(self, *args, **kwargs):
+        super(SerialWrapper, self).__init__(*args, **kwargs)
+        #self.semaphore = threading.Semaphore()
+        self.last_error = ''
+
+    def get_and_erase_last_error(self):
+        result = self.last_error
+        self.last_error = ''
+        return result
+
     def readline(self):
-        result = super(SerialWrapper, self).readline()
+        #self.semaphore.acquire()
+        try:
+            result = super(SerialWrapper, self).readline()
+        except serial.serialutil.SerialException as e:
+            #self.semaphore.release()
+            self.last_error = str(e)
+            raise e
+        #self.semaphore.release()
         if result:
             return result.decode('UTF-8')
         else:
             return result
 
     def write(self, s):
-        super(SerialWrapper, self).write(bytes(s + self.CR, 'UTF-8'))
+        try:
+            super(SerialWrapper, self).write(bytes(s + self.CR, 'UTF-8'))
+        except serial.serialutil.SerialException as e:
+            self.last_error = str(e)
+            raise e
 
+    def disconnect(self):
+        """Using a semaphore, because you do not want to disconnect, while reading"""
+        #self.semaphore.acquire()
+        self.close()
+        #self.semaphore.release()
 
 
 class ConnectionConfig(object):
@@ -160,7 +210,8 @@ class Connection(object):
         self.conf = None
         # self.connection_class = None
         self.connection = None  # it will remain None until 'connect' is called
-
+        self.last_error = ''
+        
     @classmethod
     def from_file(cls, filename):
         result = cls()
@@ -182,24 +233,53 @@ class Connection(object):
             logging.debug("baud=%s" % self.conf.baudrate)
             logging.debug("timeout=%s" % self.conf.timeout)
             try:
-                self.connection = SerialWrapper(
+                connection = SerialWrapper(
                     port=self.conf.comport, baudrate=self.conf.baudrate, 
                     timeout=self.conf.timeout) 
             except serial.SerialException as ex:
                 logging.exception("Could not connect serial")
+                self.last_error = str(ex)
                 raise
             logging.debug('yay')
         elif self.conf.connection_type == ConnectionConfig.CONNECTION_TYPE_MOCK:
-            self.connection = MockSerial(timeout=self.conf.timeout)
+            connection = MockSerial(timeout=self.conf.timeout)
         elif self.conf.connection_type == ConnectionConfig.CONNECTION_TYPE_ETHERNET:
-            self.connection = SocketWrapper(socket.AF_INET, socket.SOCK_STREAM)
-            self.connection.connect((self.conf.ip_address, self.conf.ethernet_port))
+            try:
+                connection = SocketWrapper(socket.AF_INET, socket.SOCK_STREAM)
+                connection.connect((self.conf.ip_address, self.conf.ethernet_port))
+            except socket_error as serr:
+                if serr.errno == socket_errno.ECONNREFUSED:
+                    self.last_error = 'connection refused (%s).' % socket_errno.errorcode[serr.errno]
+                else:
+                    self.last_error = 'connection error (%s).' % socket_errno.errorcode[serr.errno]
+                raise serr
+        # If all goes well.
+        self.last_error = ''
+        self.connection = connection
+
+    def disconnect(self):
+        connection = self.connection
+        self.connection = None  # so no subthreads are using this connection
+        connection.disconnect()  # now disconnect
 
     def is_connected(self):
         if self.connection is not None:
             return True
         else:
             return False
+
+    def status(self):
+        """return status string"""
+        msg = []
+        if self.is_connected():
+            msg.append('connected')
+        else:
+            msg.append('not connected')
+        if self.last_error:
+            msg.append(self.last_error)
+        if self.connection and self.connection.last_error:
+            msg.append(self.connection.last_error)
+        return '. '.join(msg)
 
     def __str__(self):
         return "Connection: conf=%s" % str(self.conf)

@@ -24,6 +24,12 @@ from config import config_gui
 
 logger = logging.getLogger(__name__)
 
+GREY = '#777'
+
+# 
+UPDATE_TIME = 0.01
+UPDATE_TIME_RAW = 0.5
+
 
 class SWMGuiElements(SWM):
     """
@@ -58,12 +64,32 @@ class SWMGuiElements(SWM):
         self.elements[elem_name] = label
         return label
 
-    def set_label(self, elem_name, elem_value):
+    def create_button(self, frame, elem_name, elem_value, command):
         """
-        Set a new value for a label
+        Create a button with a changeable label
+        Namespace of elem_name is the same as for labels.
         """
         elem_var_name = '%s_var' % elem_name
-        self.elements[elem_var_name].set(elem_value)
+        _var = tk.StringVar()
+        _var.set(elem_value)
+        self.elements[elem_var_name] = _var
+        
+        label = ttk.Button(
+            frame, 
+            textvariable=self.elements[elem_var_name],
+            command=command
+            )
+        self.elements[elem_name] = label
+        return label
+
+    def set_label(self, elem_name, elem_value):
+        """
+        Set a new value for a label or button
+        """
+        elem_var_name = '%s_var' % elem_name
+        # Only set the value if it was different: prevent all kinds of GUI updating
+        if self.elements[elem_var_name].get() != elem_value:
+            self.elements[elem_var_name].set(elem_value)
 
     def get_label(self, elem_name):
         """
@@ -93,7 +119,9 @@ class Interface():
         mainframe.grid(column=0, row=0, sticky=(tk.N, tk.W, tk.E, tk.S))
         mainframe.columnconfigure(0, weight=1)
         mainframe.rowconfigure(0, weight=1)
+
         self.mainframe = mainframe
+        #self.mainframe.bind("<Configure>", self.on_resize)
 
         # top menu
         menu = tk.Menu(self.root)
@@ -123,32 +151,67 @@ class Interface():
             row += 1
             label_frame_connection = ttk.Labelframe(new_tab, text='Connection', padding=self.PADDING)
             label_frame_connection.grid(row=row, column=0, columnspan=4, sticky="nsew")
-            #label_frame_connection.columnconfigure(0, weight=1)
-            
+
             label_frame_row = 0
-            ttk.Button(
-                label_frame_connection, text='Connect', 
-                command=self.button_fun(smart_wheel, new_tab, 'connect')
-                ).grid(row=label_frame_row, column=0)
+            sm_button = smart_wheel.create_button(
+                label_frame_connection, 
+                'connect_button', 
+                self.TEXT_CONNECT, 
+                self.button_fun(smart_wheel, new_tab, 'connect'))
+            sm_button.grid(row=label_frame_row, column=0)
+            sm_button = smart_wheel.create_button(
+                label_frame_connection, 
+                'disconnect_button', 
+                self.TEXT_DISCONNECT, 
+                self.button_fun(smart_wheel, new_tab, 'disconnect'))
+            sm_button.grid(row=label_frame_row, column=1)
+
             ttk.Button(
                 label_frame_connection, text='Reset', 
                 command=self.button_fun(smart_wheel, new_tab, 'reset')
-                ).grid(row=label_frame_row, column=1)
+                ).grid(row=label_frame_row, column=2)
             ttk.Button(
                 label_frame_connection, text='Config', 
                 command=self.button_fun(smart_wheel, new_tab, 'config')
-                ).grid(row=label_frame_row, column=2)
+                ).grid(row=label_frame_row, column=3)
 
             label_frame_row += 1
+            ttk.Label(
+                label_frame_connection, text='name', foreground=GREY).grid(
+                row=label_frame_row, column=0, sticky=tk.E)
             label = smart_wheel.create_label(
-                label_frame_connection, 'connection_name_label', smart_wheel.connection.conf.name)
-            label.grid(row=label_frame_row, column=0, columnspan=3)
+                label_frame_connection, 'connection_name_label', 
+                smart_wheel.connection.conf.name)
+            label.grid(row=label_frame_row, column=1, columnspan=10, sticky=tk.W)
+
+            label_frame_row += 1
+            ttk.Label(
+                label_frame_connection, text='status', foreground=GREY).grid(
+                row=label_frame_row, column=0, sticky=tk.E)
+            label = smart_wheel.create_label(
+                label_frame_connection, 'connection_status_label', 
+                '')  # fill initially with empty
+            label.grid(row=label_frame_row, column=1, columnspan=10, sticky=tk.W)
+
+            label_frame_row += 1
+            ttk.Label(
+                label_frame_connection, text='config', foreground=GREY).grid(
+                row=label_frame_row, column=0, sticky=tk.E)
+            label2 = smart_wheel.create_label(
+                label_frame_connection, 'connection_info_label', 
+                str(smart_wheel.connection.conf))
+            label2.grid(row=label_frame_row, column=1, columnspan=10, sticky=tk.W)
+
+            label_frame_connection.columnconfigure(0, weight=1)
+            label_frame_connection.columnconfigure(1, weight=1)
+            label_frame_connection.columnconfigure(2, weight=1)
+            label_frame_connection.columnconfigure(3, weight=1)
+            label_frame_connection.columnconfigure(4, weight=100)
 
             # Connection
             row += 1
             label_frame_wheel = ttk.Labelframe(new_tab, text='Wheel', padding=self.PADDING)
             label_frame_wheel.grid(row=row, column=0, columnspan=4, sticky="nsew")
-            #label_frame_connection.columnconfigure(0, weight=1)
             
             ttk.Button(
                 label_frame_wheel, text='Enable', 
@@ -245,6 +308,9 @@ class Interface():
             update_thread = threading.Thread(target=self.update_thread_fun(smart_wheel))
             update_thread.start()
 
+            # subscribe myself for back logging
+            smart_wheel.subscribe(self.message)
+
         # for child in mainframe.winfo_children(): 
         #     child.grid_configure(padx=5, pady=5)
 
@@ -253,6 +319,9 @@ class Interface():
         Add new wheel
         """
         logger.info('Add new wheel')
+
+    def on_resize(self, event):
+        logger.info('Resizing...')
 
     def quit(self):
         """
@@ -293,19 +362,24 @@ class Interface():
                 # print("input field value = %s" % input_value)
                 # self.gui_elements[smart_wheel.name]['output_field'].insert('end -1 chars', input_value + '\n')
             elif action == 'connect':
-                try:
-                    smart_wheel.connect()
-                    self.message(smart_wheel, 'connected')
-                except:
-                    self.message(smart_wheel, 'ERROR connecting, see logging')
-                # TODO: how to change button label
+                if not smart_wheel.connection.is_connected():
+                    try:
+                        smart_wheel.connect()
+                        self.message(smart_wheel, 'connected')
+                    except:
+                        logging.exception('could not connect')
+                        self.message(smart_wheel, 'ERROR connecting: %s' % smart_wheel.connection.last_error)
                 # self.gui_elements[smart_wheel.name]['connect_btn'].textvariable = tk.StringVar(self.root, self.TEXT_DISCONNECT)
+            elif action == 'disconnect':
+                smart_wheel.disconnect()
+                self.message(smart_wheel, 'disconnected')
+                smart_wheel.set_label('connect_button', self.TEXT_CONNECT)
             elif action == 'config':
                 # some config dialog, then save to smart_wheel
                 logger.info("config")
                 # the config_gui will call set_config
                 config_gui(
-                    self.root, 
+                    tk.Toplevel(self.root), 
                     parent=self, smart_wheel=smart_wheel, 
                     connection_config=smart_wheel.connection.conf)
             elif action == 'wheel-config':
@@ -359,6 +433,7 @@ class Interface():
         logger.info("New smart wheel [%s] has new config [%s]" % (smart_wheel, config))
         smart_wheel.connection.conf = config
         smart_wheel.set_label('connection_name_label', config.name)
+        smart_wheel.set_label('connection_info_label', str(config))
 
     # def close_me(self, target):
     #     target.destroy()
@@ -366,11 +441,19 @@ class Interface():
     def update_thread_fun(self, smart_wheel):
         """Thread for listening a specific smart wheel module"""
         def update_thread():
+            last_raw_update = time.time()
             while self.i_wanna_live:
                 while smart_wheel.incoming:
                     new_message = smart_wheel.incoming.pop(0)
                     self.message(smart_wheel, '<- [%s]' % new_message)
-                time.sleep(0.01)
+                
+                # somehow, doing this too often freezes the 'quit' function. probably due to some queue
+                check_time = time.time()
+                if check_time - last_raw_update > UPDATE_TIME_RAW:
+                    smart_wheel.set_label('connection_status_label', smart_wheel.connection.status())
+                    last_raw_update = check_time
+
+                time.sleep(UPDATE_TIME)
         return update_thread
 
     def button_fun(self, smart_wheel, tab, action):
@@ -391,8 +474,10 @@ def main():
     root = tk.Tk()
     root.title("SmartWheel")
 
+    threading.TIMEOUT_MAX = 10
+
     smart_modules = []
-    for filename in ['testconf1.json', 'testconf2.json', 'propeller.json']:
+    for filename in ['propeller.json', 'testconf1.json', 'ethernet_config.json', ]:
         try:
             new_sm = SWMGuiElements.from_config(filename)
             smart_modules.append(new_sm)
