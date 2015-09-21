@@ -44,13 +44,16 @@ class ConfigGUI(object):
 
         # a notebook is the base for tabs 
         self.note = ttk.Notebook(mainframe)
-        self.note.grid(row=0, column=0, columnspan=5)
+        self.note.grid(row=0, column=0, columnspan=5, sticky=tk.NSEW)
 
         self.note_idx = {}  # keep track of connection_type -> notebook index
         note_idx_counter = 0
 
         # a frame is a tab
         self.serial_frame = ttk.Frame(self.note)
+        self.serial_frame.columnconfigure(0, weight=1)
+        self.serial_frame.columnconfigure(1, weight=5)
+        self.serial_frame.rowconfigure(0, weight=1)
 
         # filename
         row = 0
@@ -58,14 +61,14 @@ class ConfigGUI(object):
         self.ports = ttk.Combobox(self.serial_frame)
         self.ports['values'] = [c[0] for c in com_ports]
         self.ports.current(0)
-        self.ports.grid(row=row, column=1)
+        self.ports.grid(row=row, column=1, sticky=tk.NSEW)
 
         row += 1
         ttk.Label(self.serial_frame, text="baudrate").grid(row=row, column=0)
         self.baud = ttk.Combobox(self.serial_frame)
         self.baud['values'] = baud_rates
         self.baud.current(0)
-        self.baud.grid(row=row, column=1)
+        self.baud.grid(row=row, column=1, sticky=tk.NSEW)
 
         # row += 1
         # ttk.Label(self.serial_frame, text="conn type").grid(row=row, column=0)

@@ -84,6 +84,23 @@ class SWMGuiElements(SWM):
         self.elements[elem_name] = label
         return label
 
+    def create_entry(self, frame, elem_name, elem_value):
+        """
+        Create an Entry with a changeable value
+        Namespace of elem_name is the same as for labels.
+        """
+        elem_var_name = '%s_var' % elem_name
+        _var = tk.StringVar()
+        _var.set(elem_value)
+        self.elements[elem_var_name] = _var
+        
+        label = ttk.Entry(
+            frame, 
+            textvariable=self.elements[elem_var_name]
+            )
+        self.elements[elem_name] = label
+        return label
+
     def set_label(self, elem_name, elem_value):
         """
         Set a new value for a label or button
@@ -377,7 +394,9 @@ class Interface():
         logger.info('Steer: %s, %s' % (smart_wheel, new_steer))
         self.steer_set_point = new_steer
         smart_wheel.set_label(self.GUI_STEER_SET_POINT, str(self.steer_set_point))
-        smart_wheel.command('$2,%d,%d' % (self.speed_set_point, self.steer_set_point))
+        cmd = '$2,%d,%d' % (self.speed_set_point, self.steer_set_point)
+        self.message(smart_wheel, '-> [%s]' % cmd)
+        smart_wheel.command(cmd)
 
     def set_steer_fun(self, smart_wheel):
         def fun(new_steer):
@@ -388,7 +407,9 @@ class Interface():
         logger.info('Speed: %s, %s' % (smart_wheel, new_speed))
         self.speed_set_point = new_speed
         smart_wheel.set_label(self.GUI_SPEED_SET_POINT, str(self.speed_set_point))
-        smart_wheel.command('$2,%d,%d' % (self.speed_set_point, self.steer_set_point))
+        cmd = '$2,%d,%d' % (self.speed_set_point, self.steer_set_point)
+        self.message(smart_wheel, '-> [%s]' % cmd)
+        smart_wheel.command(cmd)
 
     def set_speed_fun(self, smart_wheel):
         def fun(new_speed):
