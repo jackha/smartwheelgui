@@ -37,9 +37,13 @@ class SWMGuiElements(SWM):
     """
     Smart Wheel Module with Interface elements (with corresponding values).
     """
+    STATE_CONNECTED = 'connected'
+    STATE_NOT_CONNECTED = 'not-connected'
+
     def __init__(self, *args, **kwargs):
         super(SWMGuiElements, self).__init__(*args, **kwargs)
         self.elements = {}  # organize elements by key
+        self.state = self.STATE_NOT_CONNECTED  # status slug. user updatable; for use in GUI
 
     def set_elem(self, elem_name, elem_value):
         self.elements[elem_name] = elem_value
@@ -117,6 +121,12 @@ class SWMGuiElements(SWM):
         elem_var_name = '%s_var' % elem_name
         return self.elements[elem_var_name].get()
 
+    def update_state(self):
+        if self.connection.is_connected():
+            self.state = self.STATE_CONNECTED
+        else:
+            self.state = self.STATE_NOT_CONNECTED
+
 
 class Interface():
     #GUI_CONNECT_BTN = 'connect_button'
@@ -133,6 +143,14 @@ class Interface():
     GUI_SPEED_SET_POINT = 'speed_set_point'
     GUI_SPEED_ACTUAL = 'speed_actual'
     GUI_SPEED_SCALE = 'speed_scale'
+
+    GUI_CONNECT_BUTTON = 'connect_button'
+    GUI_DISCONNECT_BUTTON = 'disconnect_button'
+    GUI_RESET_BUTTON = 'reset_button'
+
+    GUI_ENABLE_BUTTON = 'enable_button'
+    GUI_DISABLE_BUTTON = 'disable_button'
+    GUI_EDIT_BUTTON = 'edit_button'
 
     PADDING = '10 2 10 4'
 
@@ -201,10 +219,12 @@ class Interface():
                 self.button_fun(smart_wheel, new_tab, 'disconnect'))
             sm_button.grid(row=label_frame_row, column=1)
 
-            ttk.Button(
-                label_frame_connection, text='Reset', 
-                command=self.button_fun(smart_wheel, new_tab, 'reset')
-                ).grid(row=label_frame_row, column=2)
+            reset = smart_wheel.create_button(
+                label_frame_connection, 
+                self.GUI_RESET_BUTTON, 
+                'Reset', 
+                self.button_fun(smart_wheel, new_tab, 'reset'))
+            reset.grid(row=label_frame_row, column=2)
             ttk.Button(
                 label_frame_connection, text='Config', 
                 command=self.button_fun(smart_wheel, new_tab, 'config')
@@ -247,57 +267,26 @@ class Interface():
             row += 1
             label_frame_wheel = ttk.Labelframe(new_tab, text='Wheel', padding=self.PADDING)
             label_frame_wheel.grid(row=row, column=0, columnspan=4, sticky="nsew")
+
+            button = smart_wheel.create_button(
+                label_frame_wheel, 
+                self.GUI_ENABLE_BUTTON, 
+                'Enable', 
+                self.button_fun(smart_wheel, new_tab, 'enable'))
+            button.grid(row=0, column=0)
+            button = smart_wheel.create_button(
+                label_frame_wheel, 
+                self.GUI_DISABLE_BUTTON, 
+                'Disable', 
+                self.button_fun(smart_wheel, new_tab, 'disable'))
+            button.grid(row=0, column=1)
+            button = smart_wheel.create_button(
+                label_frame_wheel, 
+                self.GUI_EDIT_BUTTON, 
+                'Edit/Debug', 
+                self.button_fun(smart_wheel, new_tab, 'wheel-gui'))
+            button.grid(row=0, column=2)
             
-            ttk.Button(
-                label_frame_wheel, text='Enable', 
-                command=self.button_fun(smart_wheel, new_tab, 'enable')
-                ).grid(row=0, column=0)
-            ttk.Button(
-                label_frame_wheel, text='Disable', 
-                command=self.button_fun(smart_wheel, new_tab, 'disable')
-                ).grid(row=0, column=1)
-            ttk.Button(
-                label_frame_wheel, text='Edit/Debug', 
-                command=self.button_fun(smart_wheel, new_tab, 'wheel-gui')
-                ).grid(row=0, column=3)
-
-            # pw.add(label_frame_connection, weight=50)
-            # pw.add(label_frame_wheel, weight=50)
-            # # pw.pack(fill='both', expand=True)
-
-            # self.gui_elements[smart_wheel.name]['connection'] = label_frame_connection
-
-            # row += 1
-            # connect_btn = ttk.Button(
-            #     new_tab, text=self.TEXT_CONNECT, 
-            #     command=self.button_fun(smart_wheel, new_tab, 'connect')
-            #     )
-            # connect_btn.grid(row=row, column=0)
-            # self.gui_elements[smart_wheel.name]['connect_btn'] = connect_btn
-
-            # check = ttk.Checkbutton(
-            #     new_tab, text="State", 
-            #     command=self.button_fun(smart_wheel, new_tab, 'enable-disable')
-            #     )
-            # check.grid(row=row, column=1)
-            # self.gui_elements[smart_wheel.name]['enable_checkbutton'] = check
-
-            # ttk.Entry(new_tab, text="COMX").grid(row=row, column=2)
-
-            # row += 1
-            # ttk.Button(
-            #     new_tab, text="Reset", 
-            #     command=self.button_fun(smart_wheel, new_tab, 'reset')
-            #     ).grid(row=row, column=0)
-            # ttk.Button(
-            #     new_tab, text="Config", 
-            #     command=self.button_fun(smart_wheel, new_tab, 'config')
-            #     ).grid(row=row, column=2)
-            # ttk.Button(
-            #     new_tab, text="Settings", 
-            #     command=self.button_fun(smart_wheel, new_tab, 'settings')
-            #     ).grid(row=row, column=3)
-
             row += 1
             ttk.Label(new_tab, text="Speed").grid(row=row, column=0)
             #ttk.Label(new_tab, text="200").grid(row=row, column=1)
@@ -368,6 +357,7 @@ class Interface():
 
             # subscribe myself for back logging
             smart_wheel.subscribe(self.message)
+            self.update_gui_elements(smart_wheel)
 
         # for child in mainframe.winfo_children(): 
         #     child.grid_configure(padx=5, pady=5)
@@ -434,6 +424,27 @@ class Interface():
         def new_fun(event):
             return self.handle_command(smart_wheel, tab, event)
         return new_fun
+
+    def update_gui_elements(self, smart_wheel):
+        """
+        Use smart_wheel.status to set the GUI status.
+        """
+        if smart_wheel.state == smart_wheel.STATE_CONNECTED:
+            smart_wheel.get_elem(self.GUI_CONNECT_BUTTON)['state'] = tk.DISABLED
+            smart_wheel.get_elem(self.GUI_DISCONNECT_BUTTON)['state'] = tk.ACTIVE
+            smart_wheel.get_elem(self.GUI_RESET_BUTTON)['state'] = tk.ACTIVE
+
+            smart_wheel.get_elem(self.GUI_ENABLE_BUTTON)['state'] = tk.ACTIVE
+            smart_wheel.get_elem(self.GUI_DISABLE_BUTTON)['state'] = tk.ACTIVE
+            smart_wheel.get_elem(self.GUI_EDIT_BUTTON)['state'] = tk.ACTIVE
+        elif smart_wheel.state == smart_wheel.STATE_NOT_CONNECTED:
+            smart_wheel.get_elem(self.GUI_CONNECT_BUTTON)['state'] = tk.ACTIVE
+            smart_wheel.get_elem(self.GUI_DISCONNECT_BUTTON)['state'] = tk.DISABLED
+            smart_wheel.get_elem(self.GUI_RESET_BUTTON)['state'] = tk.DISABLED
+
+            smart_wheel.get_elem(self.GUI_ENABLE_BUTTON)['state'] = tk.DISABLED
+            smart_wheel.get_elem(self.GUI_DISABLE_BUTTON)['state'] = tk.DISABLED
+            smart_wheel.get_elem(self.GUI_EDIT_BUTTON)['state'] = tk.DISABLED
 
     def button(self, smart_wheel, tab, action):
         """Do the appropriate action for the current SmartWheel"""
@@ -520,6 +531,9 @@ class Interface():
         except NotConnectedException as err:
             self.message(smart_wheel, 'Oops, there was an error: {}'.format(err))
 
+        smart_wheel.update_state()
+        self.update_gui_elements(smart_wheel)
+
     def set_config(self, smart_wheel, config):
         logger.info("New smart wheel [%s] has new config [%s]" % (smart_wheel, config))
         smart_wheel.connection.conf = config
@@ -559,7 +573,7 @@ class Interface():
                 # somehow, doing this too often freezes the 'quit' function. probably due to some queue
                 check_time = time.time()
                 if check_time - last_slow_update > UPDATE_TIME_SLOW:
-                    smart_wheel.set_label(self.GUI_CONNECTION_STATUS, smart_wheel.connection.status())
+                    smart_wheel.set_label(self.GUI_CONNECTION_STATUS, smart_wheel.connection.status())  # textual status
                     last_slow_update = check_time
 
                 if check_time - last_very_slow_update > UPDATE_TIME_VERY_SLOW:
