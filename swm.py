@@ -69,6 +69,9 @@ class SWM(object):
 
         self.incoming = []  # to be filled with read data
 
+        # report subscription: who wants to know my (debug) info??
+        self.report_to = []
+
     @classmethod
     def from_config(
         cls, filename):
@@ -78,27 +81,23 @@ class SWM(object):
 
     def read_thread(self):
         while self.i_wanna_live:
-            #self.semaphore.acquire()
-            #try:
-            if self.connection.is_connected():
-                new_read = self.connection.connection.readline()  # let's hope this never crashes
-                if new_read:
-                    # data_decoded = new_read.decode('utf-8')
-                    data_decoded = new_read
-                    logging.debug("Read: %s" % data_decoded)
-                    data_items = data_decoded.split(self.SEPARATOR)
-                    for item in data_items:
-                        cleaned_item = item.strip()
-                        if cleaned_item:
-                            self.incoming.append(cleaned_item)
-                else:
-                    #print('.')
-                    pass
-            #except:
-            #    self.message("OOPS, serial read failed")
-            #self.semaphore.release()
-            # self.do_something()
-            # self.message(self.counter)
+            try:
+                if self.connection.is_connected():
+                    new_read = self.connection.connection.readline()  # let's hope this never crashes
+                    if new_read:
+                        data_decoded = new_read
+                        logging.debug("Read: %s" % data_decoded)
+                        data_items = data_decoded.split(self.SEPARATOR)
+                        for item in data_items:
+                            cleaned_item = item.strip()
+                            if cleaned_item:
+                                self.incoming.append(cleaned_item.split(','))
+            except:
+                if self.connection.connection is None:
+                    continue
+                err_msg = self.connection.connection.get_and_erase_last_error()
+                if err_msg:
+                    self.message('ERROR in read thread from connection: %s' % err_msg)
             sleep(0.01)  # 10 ms sleep
 
     def write_thread(self):
@@ -106,18 +105,19 @@ class SWM(object):
             try:
                 if self.connection.is_connected():
                     write_item = self.write_queue.pop(0)
-                #self.semaphore.acquire()
-                #try:
                     logging.debug("going to write '%s'" % write_item)
-                    # let's hope this never crashes
-                    # self.connection.connection.write(bytes(write_item + self.CR, 'UTF-8'))  
                     self.connection.connection.write(write_item)
-                #except:
-                #    self.message("OOPS, serial write failed")
-                #self.semaphore.release()
-            except IndexError:
-                pass  # no more items in the write queue
+            except:
+                if self.connection.connection is None:
+                    continue
+                err_msg = self.connection.connection.get_and_erase_last_error()
+                if err_msg:
+                    self.message('ERROR in write thread from connection: %s' % err_msg)
             sleep(0.01)  # 10 ms sleep
+
+    def subscribe(self, callback_fun):
+        """Subscribe instance for messages. will be called with (smart_wheel instance, message)"""
+        self.report_to.append(callback_fun)
 
     def connect(self):
         self.message("connect")
@@ -125,7 +125,13 @@ class SWM(object):
         logging.debug(str(self.connection))
         # self.serial = self.serial_wrapper(
         #     self.serial_port, self.baudrate, timeout=self.timeout)  # '/dev/ttyS1', 19200, timeout=1
-        self.connection.connect()  # will create connection.connection
+        return self.connection.connect()  # will create connection.connection
+
+    def disconnect(self):
+        return self.connection.disconnect()
+
+    def is_connected(self):
+        return self.connection.is_connected()
 
     def status(self):
         # TODO: return status of smartwheel as dict
@@ -156,7 +162,7 @@ class SWM(object):
 
     @connected_fun
     def command(self, cmd):
-        self.message("Command: %s" % cmd)
+        self.message("Command: %s" % cmd, logging_only=True)
         self.write_queue.append(cmd)
         return cmd
 
@@ -167,5 +173,8 @@ class SWM(object):
         self.message("shut down issued")
         self.i_wanna_live = False
 
-    def message(self, msg):
+    def message(self, msg, logging_only=False):
         logging.debug("[%s] %s" % (str(self), msg))
+        if not logging_only:
+            for callback_fun in self.report_to:
+                callback_fun(self, "[%s] %s" % (str(self), msg))

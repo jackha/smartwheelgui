@@ -9,7 +9,7 @@ try:
     import Tkinter as tk
     # from Tkinter import *
     import ttk
-    from Tkinter import filedialog
+    import tkFileDialog as filedialog
 except ImportError:
     import tkinter as tk
     import tkinter.ttk as ttk
@@ -23,32 +23,37 @@ import logging
 from serial.tools.list_ports import comports
 
 
-class ConfigGUI(tk.Toplevel):
+class ConfigGUI(object):
 
 
-    def __init__(self, root, app=None, smart_wheel=None, com_ports=[], baud_rates=[], connection_config=None):
+    def __init__(
+        self, root, parent=None, smart_wheel=None, com_ports=[], baud_rates=[], 
+        connection_config=None):
         """
         Optionally set initial state to given connection_config
         """
         self.root = root
-        self.app = app  # parent window, or None
+        self.parent = parent  # parent window, or None
         self.smart_wheel = smart_wheel  # either a SWM object, or None
 
         mainframe = ttk.Frame(self.root, padding="5 5 12 12")
         mainframe.grid(column=0, row=0, sticky=(tk.N, tk.W, tk.E, tk.S))
-        mainframe.columnconfigure(0, weight=0)
+        mainframe.columnconfigure(0, weight=1)
         mainframe.columnconfigure(1, weight=1)
-        mainframe.rowconfigure(0, weight=0)
+        mainframe.rowconfigure(0, weight=1)
 
         # a notebook is the base for tabs 
         self.note = ttk.Notebook(mainframe)
-        self.note.grid(row=0, column=0, columnspan=5)
+        self.note.grid(row=0, column=0, columnspan=5, sticky=tk.NSEW)
 
         self.note_idx = {}  # keep track of connection_type -> notebook index
         note_idx_counter = 0
 
         # a frame is a tab
         self.serial_frame = ttk.Frame(self.note)
+        self.serial_frame.columnconfigure(0, weight=1)
+        self.serial_frame.columnconfigure(1, weight=5)
+        self.serial_frame.rowconfigure(0, weight=1)
 
         # filename
         row = 0
@@ -56,14 +61,14 @@ class ConfigGUI(tk.Toplevel):
         self.ports = ttk.Combobox(self.serial_frame)
         self.ports['values'] = [c[0] for c in com_ports]
         self.ports.current(0)
-        self.ports.grid(row=row, column=1)
+        self.ports.grid(row=row, column=1, sticky=tk.NSEW)
 
         row += 1
         ttk.Label(self.serial_frame, text="baudrate").grid(row=row, column=0)
         self.baud = ttk.Combobox(self.serial_frame)
         self.baud['values'] = baud_rates
         self.baud.current(0)
-        self.baud.grid(row=row, column=1)
+        self.baud.grid(row=row, column=1, sticky=tk.NSEW)
 
         # row += 1
         # ttk.Label(self.serial_frame, text="conn type").grid(row=row, column=0)
@@ -104,7 +109,6 @@ class ConfigGUI(tk.Toplevel):
         self.mock_frame = ttk.Frame(self.note)
 
         row = 0
-
 
         self.note.add(self.mock_frame, text=connection.ConnectionConfig.CONNECTION_TYPE_MOCK)
         self.note_idx[connection.ConnectionConfig.CONNECTION_TYPE_MOCK] = note_idx_counter
@@ -223,9 +227,10 @@ class ConfigGUI(tk.Toplevel):
         self.state_from_config(config)
 
     def close(self):
-        if self.app is not None and self.smart_wheel is not None:
+        if self.parent is not None and self.smart_wheel is not None:
             # callback in parent window
-            self.app.set_config(self.smart_wheel, self.config_from_state())  # we want to remember it
+            self.parent.set_config(self.smart_wheel, self.config_from_state())  # we want to remember it
+            # self.parent.close_me(self)
 
         self.root.destroy()
 
@@ -233,8 +238,8 @@ class ConfigGUI(tk.Toplevel):
         self.root.destroy()
 
 
-def config_gui(app=None, smart_wheel=None, connection_config=None):
-    root = tk.Tk()
+def config_gui(root, parent=None, smart_wheel=None, connection_config=None):
+    """Create config gui, root is tk frame"""
     root.title("Connection config")
     root.columnconfigure(0, weight=1)
     root.rowconfigure(0, weight=1)
@@ -244,21 +249,18 @@ def config_gui(app=None, smart_wheel=None, connection_config=None):
     if not com_ports:
         com_ports.append(['no ports found', 'n/a', 'n/a'])
     gui = ConfigGUI(
-        root, app=app,
+        root, parent=parent,
         smart_wheel=smart_wheel,
         com_ports=com_ports, 
         baud_rates=connection.BAUDRATES,
         connection_config=connection_config) 
 
-    root.mainloop()
-    logging.info("Config is done: [%s]" % str(gui.config_backup))
-    return gui.config_backup
-
-
+    
 if __name__ == '__main__':
     # TODO: read filename from command line arguments.
     #logging.basicConfig(filename='config.log', level=logging.DEBUG)
-    # root = tk.Tk()
+    root = tk.Tk()
     logging.basicConfig(level=logging.DEBUG)  # no file, only console
-    logging.info("Connection config tool")
-    config_gui()  
+    config_gui(root)  
+    root.mainloop()
+    

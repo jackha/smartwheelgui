@@ -31,6 +31,13 @@ class MockSerial(object):
         # milli degree
         self.temp = 30354
 
+        self.last_error = ''
+
+    def get_and_erase_last_error(self):
+        result = self.last_error
+        self.last_error = ''
+        return result
+        
     def read(self):
         start_time = time.time()
         while not self.outgoing and (
@@ -142,3 +149,6 @@ class MockSerial(object):
                 self.outgoing.append(','.join(response))
             else:
                 logging.debug("warning: no response generated from command [%s]" % command_line)
+
+    def disconnect(self):
+        logging.debug('Close mock')
