@@ -453,6 +453,8 @@ class Interface():
                     except:
                         logging.exception('could not connect')
                         self.message(smart_wheel, 'ERROR connecting: %s' % smart_wheel.connection.last_error)
+                else:
+                    self.message(smart_wheel, 'Already connected. Disconnect first')
                 # self.gui_elements[smart_wheel.name]['connect_btn'].textvariable = tk.StringVar(self.root, self.TEXT_DISCONNECT)
             elif action == 'disconnect':
                 if smart_wheel.connection.is_connected():
