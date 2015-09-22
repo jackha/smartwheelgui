@@ -44,6 +44,7 @@ class SWMGuiElements(SWM):
         super(SWMGuiElements, self).__init__(*args, **kwargs)
         self.elements = {}  # organize elements by key
         self.state = self.STATE_NOT_CONNECTED  # status slug. user updatable; for use in GUI
+        self.wheel_gui = None  # the GUI where you can call handle_cmd_from_wheel, once initialized
 
     def set_elem(self, elem_name, elem_value):
         self.elements[elem_name] = elem_value
@@ -162,7 +163,7 @@ class Interface():
         # super(Interface, self).__init__(root)
         self.i_wanna_live = True
         self.sub_window_open = False  # is set back to false from the sub window
-
+        
         self.root = root
         mainframe = ttk.Frame(root)
         # mainframe = ttk.Frame(root, padding="3 3 12 12")
@@ -329,7 +330,7 @@ class Interface():
             # input command
             row += 1
             input_field = ttk.Entry(new_tab)
-            input_field.grid(row=row, column=1, columnspan=3)
+            input_field.grid(row=row, column=0, columnspan=4, sticky=tk.NSEW)
             self.gui_elements[smart_wheel.name]['input_field'] = input_field
 
             # <return> executes the command
@@ -337,10 +338,16 @@ class Interface():
 
             # command result
             row += 1
-            output_field = tk.Text(new_tab)
+
+            scrollbar = tk.Scrollbar(new_tab)
+            scrollbar.grid(row=row, column=5, columnspan=4, rowspan=3, sticky=tk.E)
+
+            output_field = tk.Text(new_tab, yscrollcommand=scrollbar.set)
             output_field.grid(
-                row=row, column=1, columnspan=3, rowspan=3)
+                row=row, column=0, columnspan=4, rowspan=3, sticky=tk.NSEW)
             self.gui_elements[smart_wheel.name]['output_field'] = output_field
+
+            scrollbar.config(command=output_field.yview)
 
             # status bar
             row += 1
@@ -482,9 +489,9 @@ class Interface():
             elif action == 'wheel-gui':
                 # some config dialog, then save to smart_wheel
                 logger.info("wheel gui")
-                self.sub_window_open = True
+                # self.sub_window_open = True
                 if smart_wheel.is_connected():
-                    wheel_gui(
+                    smart_wheel.wheel_gui = wheel_gui(
                         tk.Toplevel(self.root), parent=self, smart_wheel=smart_wheel)
                 else:
                     self.message(smart_wheel, 'Connect me first before launching this screen')
@@ -495,18 +502,6 @@ class Interface():
                     self.message(smart_wheel, '-> [%s]' % sent.strip())
                 else:
                     self.message(smart_wheel, 'ignored, already enabled')
-                # if 'selected' in self.gui_elements[smart_wheel.name]['enable_checkbutton'].state():
-                #     if not smart_wheel.enabled:
-                #         sent = smart_wheel.enable()
-                #     else:
-                #         self.message(smart_wheel, 'ignored: smart wheel already enabled')
-                # else:
-                #     if smart_wheel.enabled:
-                #         sent = smart_wheel.disable()
-                #     else:
-                #         self.message(smart_wheel, 'ignored: smart wheel already disabled')
-                # update GUI
-                # TODO
             elif action == 'disable':
                 if smart_wheel.enabled:
                     sent = smart_wheel.disable()
@@ -569,6 +564,8 @@ class Interface():
                     new_message = smart_wheel.incoming.pop(0)
                     self.message(smart_wheel, '<- %s' % new_message)
                     self.handle_cmd_from_wheel(smart_wheel, new_message)
+                    if smart_wheel.wheel_gui is not None:
+                        smart_wheel.wheel_gui.handle_cmd_from_wheel(new_message)
                 
                 # somehow, doing this too often freezes the 'quit' function. probably due to some queue
                 check_time = time.time()
@@ -580,6 +577,9 @@ class Interface():
                     # poll wheel status
                     if smart_wheel.is_connected():
                         smart_wheel.command('$13')
+                        smart_wheel.command('$10')
+                        smart_wheel.command('$11')
+                        smart_wheel.command('$15')
                     last_very_slow_update = check_time
 
                 time.sleep(UPDATE_TIME)
@@ -595,6 +595,7 @@ class Interface():
 
     def message(self, smart_wheel, msg):
         self.gui_elements[smart_wheel.name]['output_field'].insert('end -1 chars', msg + '\n')
+        self.gui_elements[smart_wheel.name]['output_field'].yview('end -1 chars')
 
 
 def main():

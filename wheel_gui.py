@@ -22,8 +22,8 @@ import threading
 import time
 import random
 
-UPDATE_TIME = 0.01
-UPDATE_TIME_SLOW = 2
+# UPDATE_TIME = 0.01
+# UPDATE_TIME_SLOW = 2
 
 logger = logging.getLogger(__name__)
 
@@ -170,13 +170,6 @@ class WheelGUI(object):
             tree.insert("", "end", text="ADC %d" % i, values=('0', '0', '0'))
         
         tree.grid(row=row, column=0, columnspan=3, sticky=tk.NSEW)
-
-        row +=1
-        ttk.Button(mainframe, text="Close", command=self.close).grid(row=row, column=2, sticky=tk.E)
-
-        # start a thread for listening the smart wheel
-        update_thread = threading.Thread(target=self.update_thread)
-        update_thread.start()
          
     def load_from_wheel(self):
         pass
@@ -214,41 +207,13 @@ class WheelGUI(object):
             self.smart_wheel.set_label('14 Watchdog-read', 0b0100000000000000 & error > 0)
             self.smart_wheel.set_label('15 AlarmBit-read', 0b1000000000000000 & error > 0)
 
-    def message(self, msg):
-        pass
-
-    def close(self):
-        logger.info('close')
-        self.i_wanna_live = False
-        self.parent.sub_window_open = False
-        self.root.destroy()
-
-    def update_thread(self):
-        """Thread for listening a specific smart wheel module"""
-        last_update = time.time()
-        while self.i_wanna_live:
-            while self.smart_wheel.incoming:
-                new_message = self.smart_wheel.incoming.pop(0)
-                self.message('<- %s' % new_message)
-                self.parent.handle_cmd_from_wheel(self.smart_wheel, new_message)  # update parent window
-                self.handle_cmd_from_wheel(new_message)
-
-            check_time = time.time()
-            if check_time - last_update > UPDATE_TIME_SLOW:
-                if self.smart_wheel.is_connected():
-                    self.smart_wheel.command('$13')  # request wheel
-                    self.smart_wheel.command('$10')  # request measurements
-                    self.smart_wheel.command('$11')  # request status and error bits
-                last_update = check_time
-
-            time.sleep(UPDATE_TIME)
-
 
 def wheel_gui(root, parent=None, smart_wheel=None,):
-    root.title("Wheel gui")
+    root.title("Wheel: %s" % str(smart_wheel))
     root.columnconfigure(0, weight=1)
     root.rowconfigure(0, weight=1)
 
     gui = WheelGUI(
         root, parent=parent,
         smart_wheel=smart_wheel) 
+    return gui
