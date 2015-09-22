@@ -143,6 +143,7 @@ class Interface():
         """
         # super(Interface, self).__init__(root)
         self.i_wanna_live = True
+        self.sub_window_open = False  # is set back to false from the sub window
 
         self.root = root
         mainframe = ttk.Frame(root)
@@ -468,8 +469,12 @@ class Interface():
             elif action == 'wheel-gui':
                 # some config dialog, then save to smart_wheel
                 logger.info("wheel gui")
-                wheel_gui(
-                    tk.Toplevel(self.root), parent=self, smart_wheel=smart_wheel)
+                self.sub_window_open = True
+                if smart_wheel.is_connected():
+                    wheel_gui(
+                        tk.Toplevel(self.root), parent=self, smart_wheel=smart_wheel)
+                else:
+                    self.message(smart_wheel, 'Connect me first before launching this screen')
             elif action == 'enable':
                 # check the status, then enable or disable
                 if not smart_wheel.enabled:
@@ -522,19 +527,32 @@ class Interface():
     # def close_me(self, target):
     #     target.destroy()
 
+    def handle_cmd_from_wheel(self, smart_wheel, cmd):
+        """
+        cmd is a message as received with smart_wheel.incoming.pop(0)
+        
+        which is typically a list of strings.
+
+        smart_wheel object is probably a target where you want to set variables
+        """
+        if cmd[0] == '$13':
+            # $13, actual wheel position, actual wheel speed, actual steer position, actual steer<CR>
+            smart_wheel.set_label(self.GUI_SPEED_ACTUAL, str(cmd[2]))
+            smart_wheel.set_label(self.GUI_STEER_ACTUAL, str(cmd[4]))
+
     def update_thread_fun(self, smart_wheel):
         """Thread for listening a specific smart wheel module"""
         def update_thread():
             last_slow_update = time.time()
             last_very_slow_update = time.time()
             while self.i_wanna_live:
+                # prevent this thread to eat all messages and prevent this thread to send any commands
+                while self.sub_window_open:  
+                    time.sleep(1)
                 while smart_wheel.incoming:
                     new_message = smart_wheel.incoming.pop(0)
                     self.message(smart_wheel, '<- %s' % new_message)
-                    if new_message[0] == '$13':
-                        # $13, actual wheel position, actual wheel speed, actual steer position, actual steer<CR>
-                        smart_wheel.set_label(self.GUI_SPEED_ACTUAL, str(new_message[2]))
-                        smart_wheel.set_label(self.GUI_STEER_ACTUAL, str(new_message[4]))
+                    self.handle_cmd_from_wheel(smart_wheel, new_message)
                 
                 # somehow, doing this too often freezes the 'quit' function. probably due to some queue
                 check_time = time.time()
