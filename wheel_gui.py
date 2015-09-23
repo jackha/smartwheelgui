@@ -54,6 +54,16 @@ class WheelGUI(object):
         ('Vin min', 'vin-min'),
         ('Module address', 'module-address'),
         ]
+    # find the corresponding parameter idx for controller
+    CONTROL_PARAM_IDX = {
+        'kpid-wheel': '0',
+        'kpid-steer': '1',
+        'ilim-wheel': '2',
+        'ilim-steer': '3',
+        'mae-offset': '4',
+        'vin-min': '5',
+        'module-address': '6',
+    }
     STATUS_PARAMS = [
         'PF status',
         'cnt: PID, PLC, MAE',
@@ -128,11 +138,12 @@ class WheelGUI(object):
             label.grid(row=cp_row, column=0, sticky=tk.W)
             label = self.smart_wheel.create_label(control_parameters, '%s-read' % control_param, '0')
             label.grid(row=cp_row, column=1, sticky=tk.E)
-            label = self.smart_wheel.create_entry(control_parameters, '%s-input' % control_param, '0')
+            label = self.smart_wheel.create_entry(control_parameters, '%s-input' % control_param, '0', elem_args={'justify': tk.RIGHT})
             label.grid(row=cp_row, column=2, sticky=tk.E)
+            label.bind('<Return>', self.store_pid_fun(self.CONTROL_PARAM_IDX[control_param], '%s-input' % control_param))
             cp_row += 1
 
-        ttk.Button(control_parameters, text="Load from EEPROM", command=self.load_from_wheel).grid(row=cp_row, column=0, sticky=tk.E)
+        ttk.Button(control_parameters, text="Load from EEPROM", command=self.load_from_wheel).grid(row=cp_row, column=0, sticky=tk.W)
         ttk.Button(control_parameters, text="Save to EEPROM", command=self.store_to_wheel).grid(row=cp_row, column=1, sticky=tk.E)
 
         # Status
@@ -225,6 +236,14 @@ class WheelGUI(object):
 
     def store_to_wheel(self):
         self.smart_wheel.command(self.smart_wheel.CMD_STORE_IN_CONTROLLER)
+
+    def store_pid(self, param_idx, param_value):
+        self.smart_wheel.command('$51,%s,%s' % (str(param_idx), param_value))
+
+    def store_pid_fun(self, param_idx, entry_name):
+        def fun(event): 
+            return self.store_pid(str(param_idx), self.smart_wheel.get_elem(entry_name).get())
+        return fun
 
     def update_status_from_wheel(self):
         # see if dict is sometimes changed during read

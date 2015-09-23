@@ -40,6 +40,13 @@ class MockSerial(object):
         self.adc['temp'] = 30354
 
         self.reset_adc_min_max()
+
+        # must be 7 numbers
+        self.pid = [0, 0, 0, 0, 0, 0, 0]
+        self.pid_eeprom = [0, 0, 0, 0, 0, 0, 0]
+        for i in range(7):
+            self.pid[i] = i
+            self.pid_eeprom[i] = i
         
         self.last_error = ''
 
@@ -140,9 +147,12 @@ class MockSerial(object):
             elif command[0] == '$29':
                 response = ['$29', 'mock']
             elif command[0] == '$50':
-                response = ['$50', '1', '2', '3', '4', '5']
+                response = ['$50', ]
+                response.extend([str(p) for p in self.pid])
             elif command[0] == '$51':
                 response = ['$51', '1']
+                self.pid[int(command[1])] = int(command[2])
+                logger.info("pid param %s is now %s" % (command[1], command[2]))
             elif command[0] == '$58':
                 response = ['$58', '103', '5', '2', '3']
             elif command[0] == '$59':
@@ -161,9 +171,13 @@ class MockSerial(object):
             elif command[0] == '$97':
                 response = ['$97']
                 logging.debug("load values from eeprom")
+                for i in range(7):
+                    self.pid[i] = self.pid_eeprom[i]
             elif command[0] == '$98':
                 response = ['$98']
                 logging.debug("save values to eeprom")
+                for i in range(7):
+                    self.pid_eeprom[i] = self.pid[i]
 
             if response is not None:
                 self.outgoing.append(','.join(response))

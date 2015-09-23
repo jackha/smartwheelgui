@@ -87,7 +87,7 @@ class SWMGuiElements(SWM):
         self.elements[elem_name] = label
         return label
 
-    def create_entry(self, frame, elem_name, elem_value):
+    def create_entry(self, frame, elem_name, elem_value, elem_args={}):
         """
         Create an Entry with a changeable value
         Namespace of elem_name is the same as for labels.
@@ -99,7 +99,8 @@ class SWMGuiElements(SWM):
         
         label = ttk.Entry(
             frame, 
-            textvariable=self.elements[elem_var_name]
+            textvariable=self.elements[elem_var_name],
+            **elem_args
             )
         self.elements[elem_name] = label
         return label
