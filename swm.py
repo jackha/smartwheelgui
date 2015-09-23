@@ -27,11 +27,22 @@ class SWM(object):
     The class uses threads for read and write separately, and a semaphore to 
     prevent events to happen simultaneous.
     """
-    CMD_RESET = '$8'
-    CMD_ENABLE = '$1'
     CMD_DISABLE = '$0'
+    CMD_ENABLE = '$1'
+    CMD_RESET = '$8'
+    CMD_RESET_MIN_MAX_ADC = '$9'
+    CMD_GET_VOLTAGES = '$10'
+    CMD_ACT_SPEED_DIRECTION = '$13'
+    CMD_GET_FIRMWARE = '$29'
+    CMD_GET_COUNTERS = '$59'
+    CMD_GET_ADC_LABELS = '$60'
+    CMD_LOAD_FROM_CONTROLLER = '$97'
+    CMD_STORE_IN_CONTROLLER = '$98'
 
     SEPARATOR = '|'    
+
+    STATE_CONNECTED = 'connected'
+    STATE_NOT_CONNECTED = 'not-connected'
 
     def __init__(self, connection):
         #port, baudrate, timeout=10, name='', serial_wrapper=Serial):
@@ -72,6 +83,9 @@ class SWM(object):
         # report subscription: who wants to know my (debug) info??
         self.report_to = []
 
+        # last answers from wheel per command. key is command code, i.e. '$13'
+        self.cmd_from_wheel = {}  
+
     @classmethod
     def from_config(
         cls, filename):
@@ -91,7 +105,11 @@ class SWM(object):
                         for item in data_items:
                             cleaned_item = item.strip()
                             if cleaned_item:
-                                self.incoming.append(cleaned_item.split(','))
+                                # split and filter out empty items
+                                cleaned_item_split = [i for i in cleaned_item.split(',') if i != '']  
+                                self.incoming.append(cleaned_item_split)
+                                # store me
+                                self.cmd_from_wheel[cleaned_item_split[0]] = cleaned_item_split
             except:
                 if self.connection.connection is None:
                     continue
@@ -161,9 +179,16 @@ class SWM(object):
         return self.CMD_DISABLE
 
     @connected_fun
-    def command(self, cmd):
+    def command(self, cmd, once=False):
+        """
+        'once' if we need only 1 reply with this command
+        """
         self.message("Command: %s" % cmd, logging_only=True)
-        self.write_queue.append(cmd)
+        if once:
+            if cmd not in self.cmd_from_wheel.keys():
+                self.write_queue.append(cmd)
+        else:
+            self.write_queue.append(cmd)
         return cmd
 
     def __str__(self):
@@ -178,3 +203,9 @@ class SWM(object):
         if not logging_only:
             for callback_fun in self.report_to:
                 callback_fun(self, "[%s] %s" % (str(self), msg))
+
+    def update_state(self):
+        if self.connection.is_connected():
+            self.state = self.STATE_CONNECTED
+        else:
+            self.state = self.STATE_NOT_CONNECTED

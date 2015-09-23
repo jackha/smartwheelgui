@@ -37,8 +37,6 @@ class SWMGuiElements(SWM):
     """
     Smart Wheel Module with Interface elements (with corresponding values).
     """
-    STATE_CONNECTED = 'connected'
-    STATE_NOT_CONNECTED = 'not-connected'
 
     def __init__(self, *args, **kwargs):
         super(SWMGuiElements, self).__init__(*args, **kwargs)
@@ -122,12 +120,6 @@ class SWMGuiElements(SWM):
         elem_var_name = '%s_var' % elem_name
         return self.elements[elem_var_name].get()
 
-    def update_state(self):
-        if self.connection.is_connected():
-            self.state = self.STATE_CONNECTED
-        else:
-            self.state = self.STATE_NOT_CONNECTED
-
 
 class Interface():
     #GUI_CONNECT_BTN = 'connect_button'
@@ -152,6 +144,8 @@ class Interface():
     GUI_ENABLE_BUTTON = 'enable_button'
     GUI_DISABLE_BUTTON = 'disable_button'
     GUI_EDIT_BUTTON = 'edit_button'
+
+    GUI_FIRMWARE = 'firmware'
 
     PADDING = '10 2 10 4'
 
@@ -257,6 +251,15 @@ class Interface():
                 label_frame_connection, self.GUI_CONNECTION_INFO, 
                 str(smart_wheel.connection.conf))
             label2.grid(row=label_frame_row, column=1, columnspan=10, sticky=tk.W)
+
+            label_frame_row += 1
+            ttk.Label(
+                label_frame_connection, text='firmware', foreground=GREY).grid(
+                row=label_frame_row, column=0, sticky=tk.E)
+            label = smart_wheel.create_label(
+                label_frame_connection, self.GUI_FIRMWARE, 
+                '')  # fill initially with empty
+            label.grid(row=label_frame_row, column=1, columnspan=10, sticky=tk.W)
 
             label_frame_connection.columnconfigure(0, weight=1)
             label_frame_connection.columnconfigure(1, weight=1)
@@ -546,10 +549,12 @@ class Interface():
 
         smart_wheel object is probably a target where you want to set variables
         """
-        if cmd[0] == '$13':
+        if cmd[0] == SWM.CMD_ACT_SPEED_DIRECTION:
             # $13, actual wheel position, actual wheel speed, actual steer position, actual steer<CR>
             smart_wheel.set_label(self.GUI_SPEED_ACTUAL, str(cmd[2]))
             smart_wheel.set_label(self.GUI_STEER_ACTUAL, str(cmd[4]))
+        elif cmd[0] == SWM.CMD_GET_FIRMWARE:
+            smart_wheel.set_label(self.GUI_FIRMWARE, ' '.join(cmd[1:]))
 
     def update_thread_fun(self, smart_wheel):
         """Thread for listening a specific smart wheel module"""
@@ -565,7 +570,8 @@ class Interface():
                     self.message(smart_wheel, '<- %s' % new_message)
                     self.handle_cmd_from_wheel(smart_wheel, new_message)
                     if smart_wheel.wheel_gui is not None:
-                        smart_wheel.wheel_gui.handle_cmd_from_wheel(new_message)
+                        # smart_wheel.wheel_gui.handle_cmd_from_wheel(new_message)
+                        smart_wheel.wheel_gui.update_status_from_wheel()
                 
                 # somehow, doing this too often freezes the 'quit' function. probably due to some queue
                 check_time = time.time()
@@ -576,10 +582,16 @@ class Interface():
                 if check_time - last_very_slow_update > UPDATE_TIME_VERY_SLOW:
                     # poll wheel status
                     if smart_wheel.is_connected():
-                        smart_wheel.command('$13')
                         smart_wheel.command('$10')
                         smart_wheel.command('$11')
+                        smart_wheel.command('$13')
                         smart_wheel.command('$15')
+                        smart_wheel.command('$29', once=True)
+                        smart_wheel.command('$50')
+                        smart_wheel.command('$58')
+                        smart_wheel.command('$59')
+                        smart_wheel.command('$60', once=True)
+
                     last_very_slow_update = check_time
 
                 time.sleep(UPDATE_TIME)
@@ -595,7 +607,7 @@ class Interface():
 
     def message(self, smart_wheel, msg):
         self.gui_elements[smart_wheel.name]['output_field'].insert('end -1 chars', msg + '\n')
-        self.gui_elements[smart_wheel.name]['output_field'].yview('end -1 chars')
+        self.gui_elements[smart_wheel.name]['output_field'].yview('end -1 chars')  # scroll down
 
 
 def main():

@@ -1,5 +1,7 @@
 import time
 import logging
+import random
+from time import sleep
 
 
 class MockSerial(object):
@@ -21,17 +23,38 @@ class MockSerial(object):
         self.use_watchdog = False
         self.debug_screen = False
 
-        # dummy values in mV
-        self.vin = 12000
-        self.v3v3 = 3260
-        self.v5v = 5020
-        # mA
-        self.cur1 = 30
-        self.cur2 = 50
-        # milli degree
-        self.temp = 30354
+        self.adc = {}
+        self.adc_min = {}
+        self.adc_max = {}
 
+        self.adc_labels = ['vin', 'v3v3', 'v5v', 'cur1', 'cur2', 'temp']
+
+        # dummy values in mV
+        self.adc['vin'] = 12000
+        self.adc['v3v3'] = 3260
+        self.adc['v5v'] = 5020
+        # mA
+        self.adc['cur1'] = 30
+        self.adc['cur2'] = 50
+        # milli degree
+        self.adc['temp'] = 30354
+
+        self.reset_adc_min_max()
+        
         self.last_error = ''
+
+    def reset_adc_min_max(self):
+        for k in self.adc_labels:
+            self.adc_min[k] = self.adc[k]
+            self.adc_max[k] = self.adc[k]
+
+    def update_random_adc(self):
+        for k in self.adc_labels:
+            self.adc[k] += random.randint(-10, 10)
+            if self.adc[k] < self.adc_min[k]:
+                self.adc_min[k] = self.adc[k]
+            if self.adc[k] > self.adc_max[k]:
+                self.adc_max[k] = self.adc[k]
 
     def get_and_erase_last_error(self):
         result = self.last_error
@@ -91,18 +114,14 @@ class MockSerial(object):
                 response = ['$8', '1']
             elif command[0] == '$9':
                 response = ['$9', '1']
+                self.reset_adc_min_max()
             elif command[0] == '$10':
-                response = [
-                    '$10',
-                    str(self.vin), str(self.vin), str(self.vin), 
-                    str(self.v3v3), str(self.v3v3), str(self.v3v3),
-                    str(self.v5v), str(self.v5v), str(self.v5v),
-                    str(self.cur1), str(self.cur1), str(self.cur1),
-                    str(self.cur2), str(self.cur2), str(self.cur2),
-                    str(self.temp), str(self.temp), str(self.temp),
-                    ]
+                response = ['$10', ]
+                response.extend([str(self.adc[k]) for k in self.adc_labels])
+                response.extend([str(self.adc_min[k]) for k in self.adc_labels])
+                response.extend([str(self.adc_max[k]) for k in self.adc_labels])
             elif command[0] == '$11':
-                response = ['$11', str(1), str(0)]
+                response = ['$11', str(random.randint(0,65535)), str(random.randint(0,65535))]
             elif command[0] == '$13':
                 response = ['$13', 
                     str(self.actual_steer_pos),
@@ -129,7 +148,8 @@ class MockSerial(object):
             elif command[0] == '$59':
                 response = ['$59', '103', '5', '2']
             elif command[0] == '$60':
-                response = ['$60', 'labela', 'labelb']
+                response = ['$60', str(len(self.adc_labels)), ]
+                response.extend(self.adc_labels)
             elif command[0] == '$90':
                 response = ['$90']
                 logging.debug("enable debug screen")
@@ -150,5 +170,8 @@ class MockSerial(object):
             else:
                 logging.debug("warning: no response generated from command [%s]" % command_line)
 
+        sleep(0.1)
+        self.update_random_adc()
+        
     def disconnect(self):
         logging.debug('Close mock')
