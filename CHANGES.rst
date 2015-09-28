@@ -1,3 +1,28 @@
+28/9
+----
+
+This version is quite functional, lots of features work.
+
+
+- Remember GUI state, able to load from this state file.
+
+- Start GUI with config files as parameters.
+
+- connection.from_dict, from_json.
+
+- A lot more working in GUI: read and write threads to wheel_guis, 
+  where items are updated.
+
+- Buttons are now enabled and disabled, depending on state. States are 
+  now limited to 'connected' and 'not connected'
+
+- Updated mock serial: it is also used to test the wheel_gui.
+
+- The Smart Wheel Module (SWM) now remembers all command replies from
+  the wheel per command, it also represents the most direct current state
+  of the wheel.
+
+
 12/9
 ----
 

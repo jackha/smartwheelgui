@@ -25,10 +25,9 @@ import copy
 
 from swm import SWM
 
-# UPDATE_TIME = 0.01
-# UPDATE_TIME_SLOW = 2
 
 logger = logging.getLogger(__name__)
+
 
 def just_try_it(orig_fun, *args, **kwargs):
     def fun(*args, **kwargs):
