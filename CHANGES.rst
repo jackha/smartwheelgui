@@ -22,6 +22,16 @@ This version is quite functional, lots of features work.
   the wheel per command, it also represents the most direct current state
   of the wheel.
 
+- Working elements in Wheel GUI: 
+
+  - load/save from/to EEPROM
+
+  - setting control parameters
+
+  - update all kinds of status / error bits and numbers
+
+  - read and update ADC values.
+
 
 12/9
 ----
