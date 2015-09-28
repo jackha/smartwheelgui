@@ -24,8 +24,6 @@ from serial.tools.list_ports import comports
 
 
 class ConfigGUI(object):
-
-
     def __init__(
         self, root, parent=None, smart_wheel=None, com_ports=[], baud_rates=[], 
         connection_config=None):

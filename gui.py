@@ -11,6 +11,7 @@ except ImportError:
     # from Tkinter import *
     import ttk
 
+import argparse
 import json
 import sys
 import json
@@ -640,38 +641,43 @@ class Interface():
 def main():
     logging.basicConfig(level=logging.DEBUG)  # no file, only console
 
+    parser = argparse.ArgumentParser(description='Smart Wheel GUI.')
+    parser.add_argument('config_filenames', metavar='config_filenames', type=str, nargs='*',
+                       help='config filenames, run "python3 config.py" if you do not have any.')
+    
+    args = parser.parse_args()
+    logger.info("command line arguments: %s" % str(args))
+
     root = tk.Tk()
     root.title("SmartWheel")
 
-    # threading.TIMEOUT_MAX = 10
-
     smart_modules = []
-    no_state = True
+    smart_wheels_loaded = False
+    has_argument_files = False
     load_state_failed = False
-    if os.path.exists(GUI_STATE_FILENAME):
-        no_state = False
+
+    config_filenames = args.config_filenames
+    if config_filenames:
+        logger.info("Starting from config filenames [%s]..." % ', '.join(config_filenames))
+        has_argument_files = True
+        
+    if os.path.exists(GUI_STATE_FILENAME) and not has_argument_files:
         logger.info("Starting from state file [%s]..." % GUI_STATE_FILENAME)
         try:
             smart_modules = smart_wheels_from_state_file(GUI_STATE_FILENAME)
+            smart_wheels_loaded = True
         except:
             logger.exception("Load from [%s] failed." % GUI_STATE_FILENAME)
-            load_state_failed = True
-
-    if no_state:
-        logger.info("No state file [%s] found." % GUI_STATE_FILENAME)
-
-    if load_state_failed:
-        logger.info("Load state from file [%s] failed." % GUI_STATE_FILENAME)
-
-    if no_state or load_state_failed:
-        logger.info("Starting with default settings...")
-        for filename in ['propeller.json', 'testconf1.json', 'ethernet_config.json', ]:
-            # try:
+    
+    if not smart_wheels_loaded:
+        if not config_filenames:  # if they didn't come from cmdline
+            config_filenames = ['propeller.json', 'testconf1.json', 'ethernet_config.json', ]
+            logger.info("Starting with default settings [%s]..." % ', '.join(config_filenames))
+        for filename in config_filenames:
             conn = connection.Connection.from_file(filename)
-            new_sm = SWMGuiElements(connection=conn)  # .from_config(filename)
+            new_sm = SWMGuiElements(connection=conn)
             smart_modules.append(new_sm)
-            # except:
-            #     logger.exception('smart module instance failed')
+            # If anything is wrong, it should have crashed
 
     interface = Interface(root, smart_modules)
 
