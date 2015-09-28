@@ -22,6 +22,8 @@ This version is quite functional, lots of features work.
   the wheel per command, it also represents the most direct current state
   of the wheel.
 
+- Better layout of main GUI, scrolling command pane.
+
 - Working elements in Wheel GUI: 
 
   - firmware.

@@ -378,11 +378,11 @@ class Interface():
             scrollbar.config(command=output_field.yview)
 
             # status bar
-            row += 1
-            status = smart_wheel.create_label(
-                mainframe, 'status', 'status info', 
-                label_args=dict(relief=tk.SUNKEN, anchor=tk.W))
-            status.grid(row=row, column=0)
+            # row += 1
+            # status = smart_wheel.create_label(
+            #     mainframe, 'status', 'status info', 
+            #     label_args=dict(relief=tk.SUNKEN, anchor=tk.W))
+            # status.grid(row=row, column=0)
             
             note.add(new_tab, text="%d %s" % (i, smart_wheel.name))
 
