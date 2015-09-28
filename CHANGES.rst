@@ -24,6 +24,8 @@ This version is quite functional, lots of features work.
 
 - Working elements in Wheel GUI: 
 
+  - firmware.
+
   - load/save from/to EEPROM
 
   - setting control parameters
