@@ -17,6 +17,8 @@ import json
 import time
 import threading
 import logging
+import connection
+import os
 
 from swm import SWM
 from connection import NotConnectedException
@@ -31,6 +33,27 @@ GREY = '#777'
 UPDATE_TIME = 0.01
 UPDATE_TIME_SLOW = 0.5
 UPDATE_TIME_VERY_SLOW = 3
+
+GUI_STATE_FILENAME = '_guistate.json'
+
+
+def smart_wheels_from_state_file(filename):
+    smart_modules = []
+    with open(GUI_STATE_FILENAME, 'r') as f:
+        sm_config = json.load(f)
+    for single_config in sm_config:
+        conn = connection.Connection.from_dict(single_config['config'])
+        new_sm = SWMGuiElements(connection=conn)
+        smart_modules.append(new_sm)
+    return smart_modules
+
+
+def state_file_from_smart_wheels(smart_wheels):
+    tabs = []
+    for swm in smart_wheels:
+        tabs.append({'config': swm.connection.conf.as_dict()})
+    with open(GUI_STATE_FILENAME, 'w') as state_file:
+        json.dump(tabs, state_file, indent=2)
 
 
 class SWMGuiElements(SWM):
@@ -377,7 +400,7 @@ class Interface():
         """
         Add new wheel
         """
-        logger.info('Add new wheel')
+        logger.info('Add new wheel (not yet implemented)')
 
     def on_resize(self, event):
         logger.info('Resizing...')
@@ -391,6 +414,9 @@ class Interface():
         for swm in self.smart_wheels:
             swm.shut_down()
         self.root.quit()
+        # store my config
+        state_file_from_smart_wheels(self.smart_wheels)
+        logger.info('GUI state saved.')
 
     def set_steer(self, smart_wheel, new_steer):
         logger.info('Steer: %s, %s' % (smart_wheel, new_steer))
@@ -620,12 +646,32 @@ def main():
     # threading.TIMEOUT_MAX = 10
 
     smart_modules = []
-    for filename in ['propeller.json', 'testconf1.json', 'ethernet_config.json', ]:
+    no_state = True
+    load_state_failed = False
+    if os.path.exists(GUI_STATE_FILENAME):
+        no_state = False
+        logger.info("Starting from state file [%s]..." % GUI_STATE_FILENAME)
         try:
-            new_sm = SWMGuiElements.from_config(filename)
-            smart_modules.append(new_sm)
+            smart_modules = smart_wheels_from_state_file(GUI_STATE_FILENAME)
         except:
-            logger.exception('smart module instance failed')
+            logger.exception("Load from [%s] failed." % GUI_STATE_FILENAME)
+            load_state_failed = True
+
+    if no_state:
+        logger.info("No state file [%s] found." % GUI_STATE_FILENAME)
+
+    if load_state_failed:
+        logger.info("Load state from file [%s] failed." % GUI_STATE_FILENAME)
+
+    if no_state or load_state_failed:
+        logger.info("Starting with default settings...")
+        for filename in ['propeller.json', 'testconf1.json', 'ethernet_config.json', ]:
+            # try:
+            conn = connection.Connection.from_file(filename)
+            new_sm = SWMGuiElements(connection=conn)  # .from_config(filename)
+            smart_modules.append(new_sm)
+            # except:
+            #     logger.exception('smart module instance failed')
 
     interface = Interface(root, smart_modules)
 
