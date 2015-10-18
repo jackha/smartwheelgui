@@ -24,8 +24,6 @@ from serial.tools.list_ports import comports
 
 
 class ConfigGUI(object):
-
-
     def __init__(
         self, root, parent=None, smart_wheel=None, com_ports=[], baud_rates=[], 
         connection_config=None):
@@ -203,9 +201,9 @@ class ConfigGUI(object):
         logging.info("Saved file: %s" % filename)
         # logging.info("Quitting...")
         # sys.exit(0)
-        if self.app is not None and self.smart_wheel is not None:
+        if self.parent is not None and self.smart_wheel is not None:
             # callback in parent window
-            self.app.set_config(self.smart_wheel, self.config_from_state())  # we want to remember it
+            self.parent.set_config(self.smart_wheel, self.config_from_state())  # we want to remember it
 
     def load(self):
         """

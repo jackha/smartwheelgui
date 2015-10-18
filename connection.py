@@ -123,48 +123,72 @@ class ConnectionConfig(object):
         self.ethernet_port = None
         self.connection_type = self.CONNECTION_TYPE_SERIAL
 
+    def as_dict(self):
+        """representation of self as a dict for serialization purposes"""
+        result = None
+        name = self.name if self.name else 'SmartWheel [%s]' % self.connection_type
+        if self.connection_type == self.CONNECTION_TYPE_SERIAL:
+            result = {
+                'comport': self.comport, 'baudrate': self.baudrate, 
+                'timeout': self.timeout,
+                'name': name,  
+                'connection_type': self.connection_type}
+        elif self.connection_type == self.CONNECTION_TYPE_ETHERNET:
+            result = {
+                'name': name,  
+                'connection_type': self.connection_type,
+                'ip_address': self.ip_address,
+                'ethernet_port': self.ethernet_port}
+        elif self.connection_type == self.CONNECTION_TYPE_MOCK:
+            result = {
+                'name': name,  
+                'connection_type': self.connection_type}
+        return result
+
     def save(self, filename):
         logging.info("Saving [%s]..." % filename)
         with open(filename, 'w') as config_file:
-            name = self.name if self.name else 'SmartWheel [%s]' % self.connection_type
-            if self.connection_type == self.CONNECTION_TYPE_SERIAL:
-                json.dump(
-                    {'comport': self.comport, 'baudrate': self.baudrate, 
-                     'timeout': self.timeout,
-                     'name': name,  
-                     'connection_type': self.connection_type}, 
-                    config_file, indent=2)
-            elif self.connection_type == self.CONNECTION_TYPE_ETHERNET:
-                json.dump(
-                    {'name': name,  
-                     'connection_type': self.connection_type,
-                     'ip_address': self.ip_address,
-                     'ethernet_port': self.ethernet_port}, 
-                    config_file, indent=2)
-            elif self.connection_type == self.CONNECTION_TYPE_MOCK:
-                json.dump(
-                    {'name': name,  
-                     'connection_type': self.connection_type}, 
-                    config_file, indent=2)
+            json.dump(self.as_dict(), config_file, indent=2)
+
+    @classmethod
+    def from_dict(cls, d):
+        result = cls()
+        result.set_vars(d)
+        return result
+
+    @classmethod
+    def from_json(cls, json_string):
+        cfg = json.loads(json_string)
+        result = cls()
+        result.set_vars(cfg)
+        return result
 
     @classmethod
     def from_file(cls, filename):
         with open(filename, 'r') as f:
             cfg = json.load(f)
         result = cls()
-        result.set_var('connection_type', cfg['connection_type'])
-        result.set_var('name', cfg['name'])
-
-        if result.connection_type == cls.CONNECTION_TYPE_SERIAL:
-            result.set_var('comport', cfg['comport'])
-            result.set_var('baudrate', int(cfg['baudrate']))
-            result.set_var('timeout', int(cfg['timeout']))
-        elif result.connection_type == cls.CONNECTION_TYPE_ETHERNET:
-            result.set_var('ip_address', cfg['ip_address'])
-            result.set_var('ethernet_port', int(cfg['ethernet_port']))
-        elif result.connection_type == cls.CONNECTION_TYPE_MOCK:
-            pass
+        result.set_vars(cfg)
         return result
+
+    def set_vars(self, cfg):
+        """
+        cfg is a dict with all necessary fields;
+        
+        function is used by from_json and from_file
+        """
+        self.set_var('connection_type', cfg['connection_type'])
+        self.set_var('name', cfg['name'])
+
+        if self.connection_type == self.CONNECTION_TYPE_SERIAL:
+            self.set_var('comport', cfg['comport'])
+            self.set_var('baudrate', int(cfg['baudrate']))
+            self.set_var('timeout', int(cfg['timeout']))
+        elif self.connection_type == self.CONNECTION_TYPE_ETHERNET:
+            self.set_var('ip_address', cfg['ip_address'])
+            self.set_var('ethernet_port', int(cfg['ethernet_port']))
+        elif self.connection_type == self.CONNECTION_TYPE_MOCK:
+            pass
 
     def set_var(self, var_name, var_value):
         """Use set_var for setting class variables, it provides extra error 
@@ -216,12 +240,12 @@ class Connection(object):
     def from_file(cls, filename):
         result = cls()
         result.conf = ConnectionConfig.from_file(filename)
-        # if result.conf.connection_type == ConnectionConfig.CONNECTION_TYPE_SERIAL:
-        #     result.connection_class = Serial
-        # elif result.conf.connection_type == ConnectionConfig.CONNECTION_TYPE_MOCK:
-        #     result.connection_class = MockSerial
-        # elif result.conf.connection_type == ConnectionConfig.CONNECTION_TYPE_ETHERNET:
-        #     result.connection_class = socket.socket
+        return result  # voila, a Connection object that is ready to rock & roll
+
+    @classmethod
+    def from_dict(cls, d):
+        result = cls()
+        result.conf = ConnectionConfig.from_dict(d)
         return result  # voila, a Connection object that is ready to rock & roll
 
     def connect(self):

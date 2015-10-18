@@ -11,12 +11,15 @@ except ImportError:
     # from Tkinter import *
     import ttk
 
+import argparse
 import json
 import sys
 import json
 import time
 import threading
 import logging
+import connection
+import os
 
 from swm import SWM
 from connection import NotConnectedException
@@ -32,14 +35,38 @@ UPDATE_TIME = 0.01
 UPDATE_TIME_SLOW = 0.5
 UPDATE_TIME_VERY_SLOW = 3
 
+GUI_STATE_FILENAME = '_guistate.json'
+
+
+def smart_wheels_from_state_file(filename):
+    smart_modules = []
+    with open(GUI_STATE_FILENAME, 'r') as f:
+        sm_config = json.load(f)
+    for single_config in sm_config:
+        conn = connection.Connection.from_dict(single_config['config'])
+        new_sm = SWMGuiElements(connection=conn)
+        smart_modules.append(new_sm)
+    return smart_modules
+
+
+def state_file_from_smart_wheels(smart_wheels):
+    tabs = []
+    for swm in smart_wheels:
+        tabs.append({'config': swm.connection.conf.as_dict()})
+    with open(GUI_STATE_FILENAME, 'w') as state_file:
+        json.dump(tabs, state_file, indent=2)
+
 
 class SWMGuiElements(SWM):
     """
     Smart Wheel Module with Interface elements (with corresponding values).
     """
+
     def __init__(self, *args, **kwargs):
         super(SWMGuiElements, self).__init__(*args, **kwargs)
         self.elements = {}  # organize elements by key
+        self.state = self.STATE_NOT_CONNECTED  # status slug. user updatable; for use in GUI
+        self.wheel_gui = None  # the GUI where you can call handle_cmd_from_wheel, once initialized
 
     def set_elem(self, elem_name, elem_value):
         self.elements[elem_name] = elem_value
@@ -84,7 +111,7 @@ class SWMGuiElements(SWM):
         self.elements[elem_name] = label
         return label
 
-    def create_entry(self, frame, elem_name, elem_value):
+    def create_entry(self, frame, elem_name, elem_value, elem_args={}):
         """
         Create an Entry with a changeable value
         Namespace of elem_name is the same as for labels.
@@ -96,7 +123,8 @@ class SWMGuiElements(SWM):
         
         label = ttk.Entry(
             frame, 
-            textvariable=self.elements[elem_var_name]
+            textvariable=self.elements[elem_var_name],
+            **elem_args
             )
         self.elements[elem_name] = label
         return label
@@ -134,6 +162,16 @@ class Interface():
     GUI_SPEED_ACTUAL = 'speed_actual'
     GUI_SPEED_SCALE = 'speed_scale'
 
+    GUI_CONNECT_BUTTON = 'connect_button'
+    GUI_DISCONNECT_BUTTON = 'disconnect_button'
+    GUI_RESET_BUTTON = 'reset_button'
+
+    GUI_ENABLE_BUTTON = 'enable_button'
+    GUI_DISABLE_BUTTON = 'disable_button'
+    GUI_EDIT_BUTTON = 'edit_button'
+
+    GUI_FIRMWARE = 'firmware'
+
     PADDING = '10 2 10 4'
 
     def __init__(self, root, smart_wheels):
@@ -144,7 +182,7 @@ class Interface():
         # super(Interface, self).__init__(root)
         self.i_wanna_live = True
         self.sub_window_open = False  # is set back to false from the sub window
-
+        
         self.root = root
         mainframe = ttk.Frame(root)
         # mainframe = ttk.Frame(root, padding="3 3 12 12")
@@ -201,10 +239,12 @@ class Interface():
                 self.button_fun(smart_wheel, new_tab, 'disconnect'))
             sm_button.grid(row=label_frame_row, column=1)
 
-            ttk.Button(
-                label_frame_connection, text='Reset', 
-                command=self.button_fun(smart_wheel, new_tab, 'reset')
-                ).grid(row=label_frame_row, column=2)
+            reset = smart_wheel.create_button(
+                label_frame_connection, 
+                self.GUI_RESET_BUTTON, 
+                'Reset', 
+                self.button_fun(smart_wheel, new_tab, 'reset'))
+            reset.grid(row=label_frame_row, column=2)
             ttk.Button(
                 label_frame_connection, text='Config', 
                 command=self.button_fun(smart_wheel, new_tab, 'config')
@@ -237,6 +277,15 @@ class Interface():
                 str(smart_wheel.connection.conf))
             label2.grid(row=label_frame_row, column=1, columnspan=10, sticky=tk.W)
 
+            label_frame_row += 1
+            ttk.Label(
+                label_frame_connection, text='firmware', foreground=GREY).grid(
+                row=label_frame_row, column=0, sticky=tk.E)
+            label = smart_wheel.create_label(
+                label_frame_connection, self.GUI_FIRMWARE, 
+                '')  # fill initially with empty
+            label.grid(row=label_frame_row, column=1, columnspan=10, sticky=tk.W)
+
             label_frame_connection.columnconfigure(0, weight=1)
             label_frame_connection.columnconfigure(1, weight=1)
             label_frame_connection.columnconfigure(2, weight=1)
@@ -247,57 +296,26 @@ class Interface():
             row += 1
             label_frame_wheel = ttk.Labelframe(new_tab, text='Wheel', padding=self.PADDING)
             label_frame_wheel.grid(row=row, column=0, columnspan=4, sticky="nsew")
+
+            button = smart_wheel.create_button(
+                label_frame_wheel, 
+                self.GUI_ENABLE_BUTTON, 
+                'Enable', 
+                self.button_fun(smart_wheel, new_tab, 'enable'))
+            button.grid(row=0, column=0)
+            button = smart_wheel.create_button(
+                label_frame_wheel, 
+                self.GUI_DISABLE_BUTTON, 
+                'Disable', 
+                self.button_fun(smart_wheel, new_tab, 'disable'))
+            button.grid(row=0, column=1)
+            button = smart_wheel.create_button(
+                label_frame_wheel, 
+                self.GUI_EDIT_BUTTON, 
+                'Edit/Debug', 
+                self.button_fun(smart_wheel, new_tab, 'wheel-gui'))
+            button.grid(row=0, column=2)
             
-            ttk.Button(
-                label_frame_wheel, text='Enable', 
-                command=self.button_fun(smart_wheel, new_tab, 'enable')
-                ).grid(row=0, column=0)
-            ttk.Button(
-                label_frame_wheel, text='Disable', 
-                command=self.button_fun(smart_wheel, new_tab, 'disable')
-                ).grid(row=0, column=1)
-            ttk.Button(
-                label_frame_wheel, text='Edit/Debug', 
-                command=self.button_fun(smart_wheel, new_tab, 'wheel-gui')
-                ).grid(row=0, column=3)
-
-            # pw.add(label_frame_connection, weight=50)
-            # pw.add(label_frame_wheel, weight=50)
-            # # pw.pack(fill='both', expand=True)
-
-            # self.gui_elements[smart_wheel.name]['connection'] = label_frame_connection
-
-            # row += 1
-            # connect_btn = ttk.Button(
-            #     new_tab, text=self.TEXT_CONNECT, 
-            #     command=self.button_fun(smart_wheel, new_tab, 'connect')
-            #     )
-            # connect_btn.grid(row=row, column=0)
-            # self.gui_elements[smart_wheel.name]['connect_btn'] = connect_btn
-
-            # check = ttk.Checkbutton(
-            #     new_tab, text="State", 
-            #     command=self.button_fun(smart_wheel, new_tab, 'enable-disable')
-            #     )
-            # check.grid(row=row, column=1)
-            # self.gui_elements[smart_wheel.name]['enable_checkbutton'] = check
-
-            # ttk.Entry(new_tab, text="COMX").grid(row=row, column=2)
-
-            # row += 1
-            # ttk.Button(
-            #     new_tab, text="Reset", 
-            #     command=self.button_fun(smart_wheel, new_tab, 'reset')
-            #     ).grid(row=row, column=0)
-            # ttk.Button(
-            #     new_tab, text="Config", 
-            #     command=self.button_fun(smart_wheel, new_tab, 'config')
-            #     ).grid(row=row, column=2)
-            # ttk.Button(
-            #     new_tab, text="Settings", 
-            #     command=self.button_fun(smart_wheel, new_tab, 'settings')
-            #     ).grid(row=row, column=3)
-
             row += 1
             ttk.Label(new_tab, text="Speed").grid(row=row, column=0)
             #ttk.Label(new_tab, text="200").grid(row=row, column=1)
@@ -340,7 +358,7 @@ class Interface():
             # input command
             row += 1
             input_field = ttk.Entry(new_tab)
-            input_field.grid(row=row, column=1, columnspan=3)
+            input_field.grid(row=row, column=0, columnspan=4, sticky=tk.NSEW)
             self.gui_elements[smart_wheel.name]['input_field'] = input_field
 
             # <return> executes the command
@@ -348,17 +366,23 @@ class Interface():
 
             # command result
             row += 1
-            output_field = tk.Text(new_tab)
+
+            scrollbar = tk.Scrollbar(new_tab)
+            scrollbar.grid(row=row, column=5, columnspan=4, rowspan=3, sticky=tk.E)
+
+            output_field = tk.Text(new_tab, yscrollcommand=scrollbar.set)
             output_field.grid(
-                row=row, column=1, columnspan=3, rowspan=3)
+                row=row, column=0, columnspan=4, rowspan=3, sticky=tk.NSEW)
             self.gui_elements[smart_wheel.name]['output_field'] = output_field
 
+            scrollbar.config(command=output_field.yview)
+
             # status bar
-            row += 1
-            status = smart_wheel.create_label(
-                mainframe, 'status', 'status info', 
-                label_args=dict(relief=tk.SUNKEN, anchor=tk.W))
-            status.grid(row=row, column=0)
+            # row += 1
+            # status = smart_wheel.create_label(
+            #     mainframe, 'status', 'status info', 
+            #     label_args=dict(relief=tk.SUNKEN, anchor=tk.W))
+            # status.grid(row=row, column=0)
             
             note.add(new_tab, text="%d %s" % (i, smart_wheel.name))
 
@@ -368,6 +392,7 @@ class Interface():
 
             # subscribe myself for back logging
             smart_wheel.subscribe(self.message)
+            self.update_gui_elements(smart_wheel)
 
         # for child in mainframe.winfo_children(): 
         #     child.grid_configure(padx=5, pady=5)
@@ -376,7 +401,7 @@ class Interface():
         """
         Add new wheel
         """
-        logger.info('Add new wheel')
+        logger.info('Add new wheel (not yet implemented)')
 
     def on_resize(self, event):
         logger.info('Resizing...')
@@ -390,6 +415,9 @@ class Interface():
         for swm in self.smart_wheels:
             swm.shut_down()
         self.root.quit()
+        # store my config
+        state_file_from_smart_wheels(self.smart_wheels)
+        logger.info('GUI state saved.')
 
     def set_steer(self, smart_wheel, new_steer):
         logger.info('Steer: %s, %s' % (smart_wheel, new_steer))
@@ -435,6 +463,27 @@ class Interface():
             return self.handle_command(smart_wheel, tab, event)
         return new_fun
 
+    def update_gui_elements(self, smart_wheel):
+        """
+        Use smart_wheel.status to set the GUI status.
+        """
+        if smart_wheel.state == smart_wheel.STATE_CONNECTED:
+            smart_wheel.get_elem(self.GUI_CONNECT_BUTTON)['state'] = tk.DISABLED
+            smart_wheel.get_elem(self.GUI_DISCONNECT_BUTTON)['state'] = tk.ACTIVE
+            smart_wheel.get_elem(self.GUI_RESET_BUTTON)['state'] = tk.ACTIVE
+
+            smart_wheel.get_elem(self.GUI_ENABLE_BUTTON)['state'] = tk.ACTIVE
+            smart_wheel.get_elem(self.GUI_DISABLE_BUTTON)['state'] = tk.ACTIVE
+            smart_wheel.get_elem(self.GUI_EDIT_BUTTON)['state'] = tk.ACTIVE
+        elif smart_wheel.state == smart_wheel.STATE_NOT_CONNECTED:
+            smart_wheel.get_elem(self.GUI_CONNECT_BUTTON)['state'] = tk.ACTIVE
+            smart_wheel.get_elem(self.GUI_DISCONNECT_BUTTON)['state'] = tk.DISABLED
+            smart_wheel.get_elem(self.GUI_RESET_BUTTON)['state'] = tk.DISABLED
+
+            smart_wheel.get_elem(self.GUI_ENABLE_BUTTON)['state'] = tk.DISABLED
+            smart_wheel.get_elem(self.GUI_DISABLE_BUTTON)['state'] = tk.DISABLED
+            smart_wheel.get_elem(self.GUI_EDIT_BUTTON)['state'] = tk.DISABLED
+
     def button(self, smart_wheel, tab, action):
         """Do the appropriate action for the current SmartWheel"""
         print("button: %s for SmartWheel[%s]" % (action, str(smart_wheel)))
@@ -471,9 +520,9 @@ class Interface():
             elif action == 'wheel-gui':
                 # some config dialog, then save to smart_wheel
                 logger.info("wheel gui")
-                self.sub_window_open = True
+                # self.sub_window_open = True
                 if smart_wheel.is_connected():
-                    wheel_gui(
+                    smart_wheel.wheel_gui = wheel_gui(
                         tk.Toplevel(self.root), parent=self, smart_wheel=smart_wheel)
                 else:
                     self.message(smart_wheel, 'Connect me first before launching this screen')
@@ -484,18 +533,6 @@ class Interface():
                     self.message(smart_wheel, '-> [%s]' % sent.strip())
                 else:
                     self.message(smart_wheel, 'ignored, already enabled')
-                # if 'selected' in self.gui_elements[smart_wheel.name]['enable_checkbutton'].state():
-                #     if not smart_wheel.enabled:
-                #         sent = smart_wheel.enable()
-                #     else:
-                #         self.message(smart_wheel, 'ignored: smart wheel already enabled')
-                # else:
-                #     if smart_wheel.enabled:
-                #         sent = smart_wheel.disable()
-                #     else:
-                #         self.message(smart_wheel, 'ignored: smart wheel already disabled')
-                # update GUI
-                # TODO
             elif action == 'disable':
                 if smart_wheel.enabled:
                     sent = smart_wheel.disable()
@@ -520,6 +557,9 @@ class Interface():
         except NotConnectedException as err:
             self.message(smart_wheel, 'Oops, there was an error: {}'.format(err))
 
+        smart_wheel.update_state()
+        self.update_gui_elements(smart_wheel)
+
     def set_config(self, smart_wheel, config):
         logger.info("New smart wheel [%s] has new config [%s]" % (smart_wheel, config))
         smart_wheel.connection.conf = config
@@ -537,10 +577,12 @@ class Interface():
 
         smart_wheel object is probably a target where you want to set variables
         """
-        if cmd[0] == '$13':
+        if cmd[0] == SWM.CMD_ACT_SPEED_DIRECTION:
             # $13, actual wheel position, actual wheel speed, actual steer position, actual steer<CR>
             smart_wheel.set_label(self.GUI_SPEED_ACTUAL, str(cmd[2]))
             smart_wheel.set_label(self.GUI_STEER_ACTUAL, str(cmd[4]))
+        elif cmd[0] == SWM.CMD_GET_FIRMWARE:
+            smart_wheel.set_label(self.GUI_FIRMWARE, ' '.join(cmd[1:]))
 
     def update_thread_fun(self, smart_wheel):
         """Thread for listening a specific smart wheel module"""
@@ -555,17 +597,29 @@ class Interface():
                     new_message = smart_wheel.incoming.pop(0)
                     self.message(smart_wheel, '<- %s' % new_message)
                     self.handle_cmd_from_wheel(smart_wheel, new_message)
+                    if smart_wheel.wheel_gui is not None:
+                        # smart_wheel.wheel_gui.handle_cmd_from_wheel(new_message)
+                        smart_wheel.wheel_gui.update_status_from_wheel()
                 
                 # somehow, doing this too often freezes the 'quit' function. probably due to some queue
                 check_time = time.time()
                 if check_time - last_slow_update > UPDATE_TIME_SLOW:
-                    smart_wheel.set_label(self.GUI_CONNECTION_STATUS, smart_wheel.connection.status())
+                    smart_wheel.set_label(self.GUI_CONNECTION_STATUS, smart_wheel.connection.status())  # textual status
                     last_slow_update = check_time
 
                 if check_time - last_very_slow_update > UPDATE_TIME_VERY_SLOW:
                     # poll wheel status
                     if smart_wheel.is_connected():
+                        smart_wheel.command('$10')
+                        smart_wheel.command('$11')
                         smart_wheel.command('$13')
+                        smart_wheel.command('$15')
+                        smart_wheel.command('$29', once=True)
+                        smart_wheel.command('$50')
+                        smart_wheel.command('$58')
+                        smart_wheel.command('$59')
+                        smart_wheel.command('$60', once=True)
+
                     last_very_slow_update = check_time
 
                 time.sleep(UPDATE_TIME)
@@ -581,23 +635,49 @@ class Interface():
 
     def message(self, smart_wheel, msg):
         self.gui_elements[smart_wheel.name]['output_field'].insert('end -1 chars', msg + '\n')
+        self.gui_elements[smart_wheel.name]['output_field'].yview('end -1 chars')  # scroll down
 
 
 def main():
     logging.basicConfig(level=logging.DEBUG)  # no file, only console
 
+    parser = argparse.ArgumentParser(description='Smart Wheel GUI.')
+    parser.add_argument('config_filenames', metavar='config_filenames', type=str, nargs='*',
+                       help='config filenames, run "python3 config.py" if you do not have any.')
+    
+    args = parser.parse_args()
+    logger.info("command line arguments: %s" % str(args))
+
     root = tk.Tk()
     root.title("SmartWheel")
 
-    # threading.TIMEOUT_MAX = 10
-
     smart_modules = []
-    for filename in ['propeller.json', 'testconf1.json', 'ethernet_config.json', ]:
+    smart_wheels_loaded = False
+    has_argument_files = False
+    load_state_failed = False
+
+    config_filenames = args.config_filenames
+    if config_filenames:
+        logger.info("Starting from config filenames [%s]..." % ', '.join(config_filenames))
+        has_argument_files = True
+        
+    if os.path.exists(GUI_STATE_FILENAME) and not has_argument_files:
+        logger.info("Starting from state file [%s]..." % GUI_STATE_FILENAME)
         try:
-            new_sm = SWMGuiElements.from_config(filename)
-            smart_modules.append(new_sm)
+            smart_modules = smart_wheels_from_state_file(GUI_STATE_FILENAME)
+            smart_wheels_loaded = True
         except:
-            logger.exception('smart module instance failed')
+            logger.exception("Load from [%s] failed." % GUI_STATE_FILENAME)
+    
+    if not smart_wheels_loaded:
+        if not config_filenames:  # if they didn't come from cmdline
+            config_filenames = ['propeller.json', 'testconf1.json', 'ethernet_config.json', ]
+            logger.info("Starting with default settings [%s]..." % ', '.join(config_filenames))
+        for filename in config_filenames:
+            conn = connection.Connection.from_file(filename)
+            new_sm = SWMGuiElements(connection=conn)
+            smart_modules.append(new_sm)
+            # If anything is wrong, it should have crashed
 
     interface = Interface(root, smart_modules)
 
