@@ -33,7 +33,6 @@ GREY = '#777'
 # 
 UPDATE_TIME = 0.01
 UPDATE_TIME_SLOW = 0.5
-UPDATE_TIME_VERY_SLOW = 3
 
 GUI_STATE_FILENAME = '_guistate.json'
 
@@ -138,6 +137,10 @@ class SWMGuiElements(SWM):
         if self.elements[elem_var_name].get() != elem_value:
             self.elements[elem_var_name].set(elem_value)
 
+    def set_color(self, elem_name, color_value):
+        """color_value is something like '#356' """
+        self.elements[elem_name].configure(foreground=color_value)
+
     def get_label(self, elem_name):
         """
         Get value for a label
@@ -172,6 +175,9 @@ class Interface():
 
     GUI_FIRMWARE = 'firmware'
 
+    GUI_VIN = 'vin'
+    GUI_COUNTERS = 'counters'
+
     PADDING = '10 2 10 4'
 
     def __init__(self, root, smart_wheels):
@@ -181,7 +187,7 @@ class Interface():
         """
         # super(Interface, self).__init__(root)
         self.i_wanna_live = True
-        self.sub_window_open = False  # is set back to false from the sub window
+        # self.sub_window_open = False  # is set back to false from the sub window
         
         self.root = root
         mainframe = ttk.Frame(root)
@@ -283,6 +289,24 @@ class Interface():
                 row=label_frame_row, column=0, sticky=tk.E)
             label = smart_wheel.create_label(
                 label_frame_connection, self.GUI_FIRMWARE, 
+                '')  # fill initially with empty
+            label.grid(row=label_frame_row, column=1, columnspan=10, sticky=tk.W)
+
+            label_frame_row += 1
+            ttk.Label(
+                label_frame_connection, text='vin', foreground=GREY).grid(
+                row=label_frame_row, column=0, sticky=tk.E)
+            label = smart_wheel.create_label(
+                label_frame_connection, self.GUI_VIN, 
+                '-')  # fill initially with empty
+            label.grid(row=label_frame_row, column=1, columnspan=10, sticky=tk.W)
+
+            label_frame_row += 1
+            ttk.Label(
+                label_frame_connection, text='counters', foreground=GREY).grid(
+                row=label_frame_row, column=0, sticky=tk.E)
+            label = smart_wheel.create_label(
+                label_frame_connection, self.GUI_COUNTERS, 
                 '')  # fill initially with empty
             label.grid(row=label_frame_row, column=1, columnspan=10, sticky=tk.W)
 
@@ -569,7 +593,7 @@ class Interface():
     # def close_me(self, target):
     #     target.destroy()
 
-    def handle_cmd_from_wheel(self, smart_wheel, cmd):
+    def update_gui_from_wheel(self, smart_wheel):
         """
         cmd is a message as received with smart_wheel.incoming.pop(0)
         
@@ -577,51 +601,67 @@ class Interface():
 
         smart_wheel object is probably a target where you want to set variables
         """
-        if cmd[0] == SWM.CMD_ACT_SPEED_DIRECTION:
+        cmds = smart_wheel.cmd_from_wheel
+        if SWM.CMD_ACT_SPEED_DIRECTION in cmds:
+            cmd = cmds[SWM.CMD_ACT_SPEED_DIRECTION]
             # $13, actual wheel position, actual wheel speed, actual steer position, actual steer<CR>
             smart_wheel.set_label(self.GUI_SPEED_ACTUAL, str(cmd[2]))
             smart_wheel.set_label(self.GUI_STEER_ACTUAL, str(cmd[4]))
-        elif cmd[0] == SWM.CMD_GET_FIRMWARE:
+        if SWM.CMD_GET_FIRMWARE in cmds:
+            cmd = cmds[SWM.CMD_GET_FIRMWARE]
             smart_wheel.set_label(self.GUI_FIRMWARE, ' '.join(cmd[1:]))
+        if SWM.CMD_GET_VOLTAGES in cmds:
+            cmd = cmds[SWM.CMD_GET_VOLTAGES]
+            c = cmd[1+6]  # TODO: make better
+            smart_wheel.set_label(self.GUI_VIN, c)  # avg for all vars, then all min, all max 
+            vin_min = int(c)
+            if vin_min < 10500:
+                smart_wheel.set_color(self.GUI_VIN, 'red')
+            else:
+                smart_wheel.set_color(self.GUI_VIN, 'black')
 
+        # textual status
+        smart_wheel.set_label(
+            self.GUI_CONNECTION_STATUS, smart_wheel.connection.status())  
+                    
+        # counters
+        smart_wheel.set_label(
+            self.GUI_COUNTERS, 
+            'threads: r=%d, w=%d. counts: r=%d, w=%d' % (
+                smart_wheel.read_counter, smart_wheel.write_counter, 
+                smart_wheel.total_reads, smart_wheel.total_writes))
+            
     def update_thread_fun(self, smart_wheel):
         """Thread for listening a specific smart wheel module"""
         def update_thread():
             last_slow_update = time.time()
             last_very_slow_update = time.time()
+            has_update = True
             while self.i_wanna_live:
                 # prevent this thread to eat all messages and prevent this thread to send any commands
-                while self.sub_window_open:  
-                    time.sleep(1)
+                #while self.sub_window_open:  
+                #    time.sleep(1)
+
                 while smart_wheel.incoming:
-                    new_message = smart_wheel.incoming.pop(0)
-                    self.message(smart_wheel, '<- %s' % new_message)
-                    self.handle_cmd_from_wheel(smart_wheel, new_message)
-                    if smart_wheel.wheel_gui is not None:
-                        # smart_wheel.wheel_gui.handle_cmd_from_wheel(new_message)
-                        smart_wheel.wheel_gui.update_status_from_wheel()
-                
-                # somehow, doing this too often freezes the 'quit' function. probably due to some queue
+                    new_message = smart_wheel.incoming.pop(0)  # thread safe?
+                    logger.debug('new message: %s' % new_message)
+                    # too much info
+                    # self.message(smart_wheel, '<- %s' % new_message)  # update main gui
+                    
                 check_time = time.time()
                 if check_time - last_slow_update > UPDATE_TIME_SLOW:
-                    smart_wheel.set_label(self.GUI_CONNECTION_STATUS, smart_wheel.connection.status())  # textual status
                     last_slow_update = check_time
 
-                if check_time - last_very_slow_update > UPDATE_TIME_VERY_SLOW:
-                    # poll wheel status
-                    if smart_wheel.is_connected():
-                        smart_wheel.command('$10')
-                        smart_wheel.command('$11')
-                        smart_wheel.command('$13')
-                        smart_wheel.command('$15')
-                        smart_wheel.command('$29', once=True)
-                        smart_wheel.command('$50')
-                        smart_wheel.command('$58')
-                        smart_wheel.command('$59')
-                        smart_wheel.command('$60', once=True)
+                    if smart_wheel.wheel_gui is not None:
+                        smart_wheel.wheel_gui.update_status_from_wheel()
 
-                    last_very_slow_update = check_time
+                    # update main gui speed + firmware + vin + etc
+                    # for msg_key in [SWM.CMD_GET_FIRMWARE, SWM.CMD_GET_VOLTAGES, SWM.CMD_ACT_SPEED_DIRECTION]:
+                    #     msg = smart_wheel.cmd_from_wheel.get(msg_key, None)
+                    #     if msg is not None:
 
+                    self.update_gui_from_wheel(smart_wheel)
+                 
                 time.sleep(UPDATE_TIME)
         return update_thread
 

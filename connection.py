@@ -4,6 +4,7 @@ import logging
 import json
 import serial
 import socket
+import time
 import threading
 
 from serial import Serial
@@ -68,6 +69,7 @@ class SerialWrapper(Serial):
         super(SerialWrapper, self).__init__(*args, **kwargs)
         #self.semaphore = threading.Semaphore()
         self.last_error = ''
+        self.current_read = ''  # buffer
 
     def get_and_erase_last_error(self):
         result = self.last_error
@@ -75,25 +77,52 @@ class SerialWrapper(Serial):
         return result
 
     def readline(self):
+        """
+        Our readline reads a character at a time. This prevents problems as 
+        described below.
+
+        The readline command takes the amount of timeout time (1 second). And if 
+        during that time we use write command, the readline is stopped.
+        """
         #self.semaphore.acquire()
-        try:
-            result = super(SerialWrapper, self).readline()
-        except serial.serialutil.SerialException as e:
-            #self.semaphore.release()
-            self.last_error = str(e)
-            raise e
-        #self.semaphore.release()
-        if result:
-            return result.decode('UTF-8')
+        result = ''
+        #try:
+        # if 1:
+            #logger.info('jaaa')
+            #time_start = time.time()
+            #result = super(SerialWrapper, self).readline()  # takes 1 second
+
+        # read a character at a time: very fast
+        ch = super(SerialWrapper, self).read().decode('UTF-8')  
+        if ch == '\r' or ch == '\n':
+            result = self.current_read
+            self.current_read = ''
         else:
-            return result
+            self.current_read += ch 
+
+            #    logger.info('yea')
+            # logger.info('read ch: %s' % ch)
+            #logger.info("read time: %f" % (time.time() - time_start))
+        # except serial.serialutil.SerialException as e:
+        #     #self.semaphore.release()
+        #     self.last_error = str(e)
+        #     raise e
+        #self.semaphore.release()
+        # if result:
+        #     return result.decode('UTF-8')
+        # else:
+        #     return result
+        return result
 
     def write(self, s):
+        #self.semaphore.acquire()
         try:
             super(SerialWrapper, self).write(bytes(s + self.CR, 'UTF-8'))
         except serial.serialutil.SerialException as e:
             self.last_error = str(e)
+            #self.semaphore.release()
             raise e
+        #self.semaphore.release()
 
     def disconnect(self):
         """Using a semaphore, because you do not want to disconnect, while reading"""
