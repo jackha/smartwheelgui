@@ -25,6 +25,7 @@ from swm import SWM
 from connection import NotConnectedException
 from config import config_gui
 from wheel_gui import wheel_gui
+from loghelper import setup_logging
 
 logger = logging.getLogger(__name__)
 
@@ -35,6 +36,8 @@ UPDATE_TIME = 0.01
 UPDATE_TIME_SLOW = 0.5
 
 GUI_STATE_FILENAME = '_guistate.json'
+
+LOG_PATH = './logs'
 
 
 def smart_wheels_from_state_file(filename):
@@ -510,7 +513,7 @@ class Interface():
 
     def button(self, smart_wheel, tab, action):
         """Do the appropriate action for the current SmartWheel"""
-        print("button: %s for SmartWheel[%s]" % (action, str(smart_wheel)))
+        logger.info("button: %s for SmartWheel[%s]" % (action, str(smart_wheel)), extra=smart_wheel.extra)
         try:
             if action == 'reset':
                 sent = smart_wheel.reset()
@@ -679,7 +682,21 @@ class Interface():
 
 
 def main():
-    logging.basicConfig(level=logging.DEBUG)  # no file, only console
+    #logging.basicConfig(level=logging.DEBUG)  # no file, only console
+    # pre logging: delete main.log, if exists
+    filename = os.path.join(LOG_PATH, 'main.log')
+    if os.path.exists(filename):
+        print("Delete existing logfile at [%s]" % filename)
+        os.remove(filename)
+
+    # set up logging
+    setup_logging(
+        LOG_PATH, 
+        file_level=logging.DEBUG, 
+        console_level=logging.DEBUG,
+        # file_formatter='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
+        # console_formatter='%(asctime)8s %(levelname)5s - %(message)s'
+        )
 
     parser = argparse.ArgumentParser(description='Smart Wheel GUI.')
     parser.add_argument('config_filenames', metavar='config_filenames', type=str, nargs='*',
@@ -718,6 +735,13 @@ def main():
             new_sm = SWMGuiElements(connection=conn)
             smart_modules.append(new_sm)
             # If anything is wrong, it should have crashed
+
+    # delete log files
+    for sm in smart_modules:
+        filename = os.path.join(LOG_PATH, '%s.log' % sm.extra['wheel_slug'])
+        if os.path.exists(filename):
+            logger.info("Delete existing logfile at [%s]" % filename)
+            os.remove(filename)
 
     interface = Interface(root, smart_modules)
 

@@ -24,6 +24,11 @@ def connected_fun(func):
     return fun
 
 
+def slugify(s):
+    """non foolproof, but easy slugify function"""
+    return s.lower().replace(' ', '-')
+
+
 class SWM(object):
     """
     Smart wheel module: SmartWheel (or other serial object) python binding
@@ -72,6 +77,7 @@ class SWM(object):
         self.counter = 0
         self.enabled = False
         self.name = self.connection.conf.name
+        self.slug = slugify(self.name)
 
         # self.connected = False
 
@@ -109,6 +115,9 @@ class SWM(object):
         # used to check alivenes of threads
         self.read_counter = 0
         self.write_counter = 0
+
+        # for logging
+        self.extra = self._extra()
 
     @classmethod
     def from_config(
@@ -255,7 +264,7 @@ class SWM(object):
         self.i_wanna_live = False
 
     def message(self, msg, logging_only=False):
-        logging.debug("[%s] %s" % (str(self), msg))
+        logger.debug("[%s] %s" % (str(self), msg), extra=self.extra)
         if not logging_only:
             for callback_fun in self.report_to:
                 callback_fun(self, "[%s] %s" % (str(self), msg))
@@ -265,3 +274,7 @@ class SWM(object):
             self.state = self.STATE_CONNECTED
         else:
             self.state = self.STATE_NOT_CONNECTED
+
+    def _extra(self):
+        """return dict which can be used in logger.info(msg, extra=...)"""
+        return dict(wheel_name=self.name, wheel_slug=self.slug)
