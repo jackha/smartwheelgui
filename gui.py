@@ -513,7 +513,7 @@ class Interface():
 
     def button(self, smart_wheel, tab, action):
         """Do the appropriate action for the current SmartWheel"""
-        logger.info("button: %s for SmartWheel[%s]" % (action, str(smart_wheel)), extra=smart_wheel.extra)
+        logger.info("button: %s for SmartWheel[%s]" % (action, str(smart_wheel)))
         try:
             if action == 'reset':
                 sent = smart_wheel.reset()

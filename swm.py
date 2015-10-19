@@ -140,7 +140,7 @@ class SWM(object):
                     if new_read:
                         # something like: $50,10,20,6000,6000,2000,10500,1|
                         # or: $58,0,0,6094426,0,|
-                        logging.debug("Read: %s" % new_read)
+                        logger.debug("Read: %s" % new_read, extra=self.extra)
                         data_items = new_read.split(self.SEPARATOR)
                         for item in data_items:
                             cleaned_item = item.strip()
@@ -168,7 +168,7 @@ class SWM(object):
                 if self.connection.is_connected():
                     while self.write_queue:  # thread safe?
                         write_item = self.write_queue.pop(0)
-                        # logging.debug("going to write '%s'" % write_item)
+                        # logger.debug("going to write '%s'" % write_item)
                         self.connection.connection.write(write_item)
                         self.total_writes += 1
             except:
@@ -187,11 +187,11 @@ class SWM(object):
                 while next_poll < curr_time:
                     if do_poll:
                         # missed some update step
-                        logger.info("missed update step: %s" % next_poll)
+                        logger.info("missed update step: %s" % next_poll, extra=self.extra)
                     next_poll += self.update_period
                     do_poll = True
                 if do_poll:  # in case we missed some update step, just do update once.
-                    logging.debug('update poll')
+                    logger.debug('update poll', extra=self.extra)
                     for poll_cmd, poll_once in self.POLL_COMMANDS:
                         self.command(poll_cmd, once=poll_once)
 
@@ -204,8 +204,8 @@ class SWM(object):
 
     def connect(self):
         self.message("connect")
-        logging.info("going to connect to connection!!")
-        logging.debug(str(self.connection))
+        logger.info("going to connect to connection!!", extra=self.extra)
+        logger.debug(str(self.connection), extra=self.extra)
         # self.serial = self.serial_wrapper(
         #     self.serial_port, self.baudrate, timeout=self.timeout)  # '/dev/ttyS1', 19200, timeout=1
         return self.connection.connect()  # will create connection.connection
