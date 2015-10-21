@@ -33,7 +33,7 @@ GREY = '#777'
 
 # 
 UPDATE_TIME = 0.01
-UPDATE_TIME_SLOW = 0.5
+UPDATE_TIME_SLOW = 0.2
 
 GUI_STATE_FILENAME = '_guistate.json'
 
@@ -456,7 +456,7 @@ class Interface():
         except:
             pass
 
-        self.mainframe.after(1000, self.update_me)
+        self.mainframe.after(10, self.update_me)
 
     def new_wheel(self):
         """
