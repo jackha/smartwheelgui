@@ -424,7 +424,8 @@ class Interface():
         # for child in mainframe.winfo_children(): 
         #     child.grid_configure(padx=5, pady=5)
         self.last_slow_update = time.time()
-        self.gui_message_queue = []
+        self.gui_message_queue = []  # (smart_wheel, msg)
+        self.gui_set_label_queue = []  # (smart_wheel, label_name, text)
         self.update_me()
 
     def update_me(self):
@@ -446,6 +447,13 @@ class Interface():
             self._message(target, msg)
         except:
             # empty queue
+            pass
+
+        # set_label
+        try:
+            sw, label_name, txt = self.gui_set_label_queue.pop(0)
+            sw.set_label(label_name, txt)
+        except:
             pass
 
         self.mainframe.after(10, self.update_me)
@@ -472,10 +480,14 @@ class Interface():
         state_file_from_smart_wheels(self.smart_wheels)
         logger.info('GUI state saved.')
 
+    def set_label(self, smart_wheel, label_name, text):
+        self.gui_set_label_queue.append((smart_wheel, label_name, text))
+
     def set_steer(self, smart_wheel, new_steer):
         logger.info('Steer: %s, %s' % (smart_wheel, new_steer))
         self.steer_set_point = new_steer
-        smart_wheel.set_label(self.GUI_STEER_SET_POINT, str(self.steer_set_point))
+        # smart_wheel.set_label(self.GUI_STEER_SET_POINT, str(self.steer_set_point))
+        self.set_label(smart_wheel, self.GUI_STEER_SET_POINT, str(self.steer_set_point))
         cmd = '$2,%d,%d' % (self.speed_set_point, self.steer_set_point)
         self.message(smart_wheel, '-> [%s]' % cmd)
         smart_wheel.command(cmd)
@@ -488,7 +500,7 @@ class Interface():
     def set_speed(self, smart_wheel, new_speed):
         logger.info('Speed: %s, %s' % (smart_wheel, new_speed))
         self.speed_set_point = new_speed
-        smart_wheel.set_label(self.GUI_SPEED_SET_POINT, str(self.speed_set_point))
+        self.set_label(smart_wheel, self.GUI_SPEED_SET_POINT, str(self.speed_set_point))
         cmd = '$2,%d,%d' % (self.speed_set_point, self.steer_set_point)
         self.message(smart_wheel, '-> [%s]' % cmd)
         smart_wheel.command(cmd)
@@ -616,8 +628,8 @@ class Interface():
     def set_config(self, smart_wheel, config):
         logger.info("New smart wheel [%s] has new config [%s]" % (smart_wheel, config))
         smart_wheel.connection.conf = config
-        smart_wheel.set_label(self.GUI_CONNECTION_NAME, config.name)
-        smart_wheel.set_label(self.GUI_CONNECTION_INFO, str(config))
+        self.set_label(smart_wheel, self.GUI_CONNECTION_NAME, config.name)
+        self.set_label(smart_wheel, self.GUI_CONNECTION_INFO, str(config))
 
     # def close_me(self, target):
     #     target.destroy()
@@ -625,6 +637,8 @@ class Interface():
     def update_gui_from_wheel(self, smart_wheel):
         """
         cmd is a message as received with smart_wheel.incoming.pop(0)
+
+        call only from main thread! there are direct GUI edits
         
         which is typically a list of strings.
 
