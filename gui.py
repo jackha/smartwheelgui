@@ -423,6 +423,23 @@ class Interface():
 
         # for child in mainframe.winfo_children(): 
         #     child.grid_configure(padx=5, pady=5)
+        self.last_slow_update = time.time()
+        self.update_me()
+
+    def update_me(self):
+        # main thread for updating GUI stuff.
+    
+        check_time = time.time()
+        if check_time - self.last_slow_update > UPDATE_TIME_SLOW:
+            self.last_slow_update = check_time
+
+            for smart_wheel in self.smart_wheels:
+                if smart_wheel.wheel_gui is not None:
+                    smart_wheel.wheel_gui.update_status_from_wheel()
+
+                self.update_gui_from_wheel(smart_wheel)
+              
+        self.mainframe.after(100, self.update_me)
 
     def new_wheel(self):
         """
@@ -637,8 +654,8 @@ class Interface():
     def update_thread_fun(self, smart_wheel):
         """Thread for listening a specific smart wheel module"""
         def update_thread():
-            last_slow_update = time.time()
-            last_very_slow_update = time.time()
+            # last_slow_update = time.time()
+            # last_very_slow_update = time.time()
             has_update = True
             while self.i_wanna_live:
                 # prevent this thread to eat all messages and prevent this thread to send any commands
@@ -650,21 +667,7 @@ class Interface():
                     logger.debug('new message: %s' % new_message)
                     # too much info
                     # self.message(smart_wheel, '<- %s' % new_message)  # update main gui
-                    
-                check_time = time.time()
-                if check_time - last_slow_update > UPDATE_TIME_SLOW:
-                    last_slow_update = check_time
-
-                    if smart_wheel.wheel_gui is not None:
-                        smart_wheel.wheel_gui.update_status_from_wheel()
-
-                    # update main gui speed + firmware + vin + etc
-                    # for msg_key in [SWM.CMD_GET_FIRMWARE, SWM.CMD_GET_VOLTAGES, SWM.CMD_ACT_SPEED_DIRECTION]:
-                    #     msg = smart_wheel.cmd_from_wheel.get(msg_key, None)
-                    #     if msg is not None:
-
-                    self.update_gui_from_wheel(smart_wheel)
-                 
+                                     
                 time.sleep(UPDATE_TIME)
         return update_thread
 
