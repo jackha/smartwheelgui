@@ -211,6 +211,7 @@ class SWM(object):
         return self.connection.connect()  # will create connection.connection
 
     def disconnect(self):
+        self.cmd_from_wheel = {}  # reset all we've got from the wheel
         return self.connection.disconnect()
 
     def is_connected(self):
