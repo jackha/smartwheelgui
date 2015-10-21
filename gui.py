@@ -424,6 +424,7 @@ class Interface():
         # for child in mainframe.winfo_children(): 
         #     child.grid_configure(padx=5, pady=5)
         self.last_slow_update = time.time()
+        self.gui_message_queue = []
         self.update_me()
 
     def update_me(self):
@@ -439,7 +440,15 @@ class Interface():
 
                 self.update_gui_from_wheel(smart_wheel)
               
-        self.mainframe.after(100, self.update_me)
+        # messages
+        try:
+            target, msg = self.gui_message_queue.pop(0)
+            self._message(target, msg)
+        except:
+            # empty queue
+            pass
+
+        self.mainframe.after(10, self.update_me)
 
     def new_wheel(self):
         """
@@ -680,6 +689,16 @@ class Interface():
         return new_fun
 
     def message(self, smart_wheel, msg):
+        """
+        The message function to be called
+        """
+
+        self.gui_message_queue.append((smart_wheel, msg))
+
+    def _message(self, smart_wheel, msg):
+        """
+        The actual message function that must be called from the main thread
+        """
         self.gui_elements[smart_wheel.name]['output_field'].insert('end -1 chars', msg + '\n')
         self.gui_elements[smart_wheel.name]['output_field'].yview('end -1 chars')  # scroll down
 
