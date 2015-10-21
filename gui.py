@@ -456,7 +456,7 @@ class Interface():
         except:
             pass
 
-        self.mainframe.after(10, self.update_me)
+        self.mainframe.after(1000, self.update_me)
 
     def new_wheel(self):
         """
@@ -474,6 +474,8 @@ class Interface():
         logger.info('Quit')
         self.i_wanna_live = False
         for swm in self.smart_wheels:
+            if swm.connection.is_connected():
+                swm.disconnect()
             swm.shut_down()
         self.root.quit()
         # store my config
@@ -704,9 +706,9 @@ class Interface():
 
     def message(self, smart_wheel, msg):
         """
-        The message function to be called
+        The message function to be called: add message to queue because this 
+        function may be called from a thread
         """
-
         self.gui_message_queue.append((smart_wheel, msg))
 
     def _message(self, smart_wheel, msg):

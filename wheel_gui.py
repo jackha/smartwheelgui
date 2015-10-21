@@ -247,7 +247,7 @@ class WheelGUI(object):
 
     def update_status_from_wheel(self):
         """
-        update gui from status of wheel - do not call too often
+        update gui from status of wheel - only call from main thread
         """
         # see if dict is sometimes changed during read
         wheel_values = copy.deepcopy(self.smart_wheel.cmd_from_wheel)
