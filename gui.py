@@ -309,12 +309,7 @@ class Interface():
         new_tab = ttk.Frame(self.note)
             
         row = 0
-        ttk.Label(new_tab, text=smart_wheel.name).grid(row=row, column=0, columnspan=3)
 
-        # pw = ttk.PanedWindow(new_tab, orient=tk.VERTICAL)
-
-        # Connection
-        row += 1
         label_frame_connection = ttk.Labelframe(new_tab, text='Connection', padding=self.PADDING)
         label_frame_connection.grid(row=row, column=0, columnspan=4, sticky="nsew")
 
