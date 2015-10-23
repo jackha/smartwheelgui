@@ -144,8 +144,9 @@ class ConnectionConfig(object):
         CONNECTION_TYPE_SERIAL, CONNECTION_TYPE_MOCK, CONNECTION_TYPE_ETHERNET]
 
     def __init__(self):
-        self.comport = None
-        self.baudrate = None  # int
+        """Set default values. These values are to be changed."""
+        self.comport = ''
+        self.baudrate = 115000
         self.timeout = 0  # int
         self.name = 'connection-name'
         self.ip_address = None

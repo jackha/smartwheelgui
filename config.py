@@ -22,6 +22,8 @@ import logging
 # from listports import serial_ports
 from serial.tools.list_ports import comports
 
+logger = logging.getLogger(__name__)
+
 
 class ConfigGUI(object):
     def __init__(
@@ -151,6 +153,7 @@ class ConfigGUI(object):
         self.name_var.set(config.name)
         self.note.select(self.note_idx[config.connection_type])
         # config.timeout
+        logger.info('State from config: %r' % str(config))
         if config.connection_type == connection.ConnectionConfig.CONNECTION_TYPE_SERIAL:
             self.baud.set(config.baudrate)
             self.ports.set(config.comport)
@@ -198,7 +201,7 @@ class ConfigGUI(object):
         if not filename:  # user probably clicked cancel
             return
         config.save(filename)
-        logging.info("Saved file: %s" % filename)
+        logger.info("Saved file: %s" % filename)
         # logging.info("Quitting...")
         # sys.exit(0)
         if self.parent is not None and self.smart_wheel is not None:
@@ -220,7 +223,7 @@ class ConfigGUI(object):
             return
         config = connection.ConnectionConfig.from_file(filename)
         self.config_backup = config
-        logging.info("Loaded file: %s" % filename)
+        logger.info("Loaded file: %s" % filename)
 
         self.state_from_config(config)
 

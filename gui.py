@@ -503,8 +503,18 @@ class Interface():
 
         conn = connection.Connection()
         new_sm = SWMGuiElements(connection=conn)
-        self.smart_wheels.append(new_sm)
+
         self.make_gui_for_smart_wheel(new_sm)
+        self.smart_wheels.append(new_sm)
+
+        # pop up config for initial configuration
+        config_gui(
+            tk.Toplevel(self.root), 
+            parent=self, smart_wheel=new_sm, 
+            connection_config=new_sm.connection.conf)
+
+    def delete_wheel(self):
+        pass
 
     def on_resize(self, event):
         logger.info('Resizing...')
@@ -668,11 +678,8 @@ class Interface():
     def set_config(self, smart_wheel, config):
         logger.info("New smart wheel [%s] has new config [%s]" % (smart_wheel, config))
         smart_wheel.connection.conf = config
-        self.set_label(smart_wheel, self.GUI_CONNECTION_NAME, config.name)
-        self.set_label(smart_wheel, self.GUI_CONNECTION_INFO, str(config))
-
-    # def close_me(self, target):
-    #     target.destroy()
+        self.gui_set_label_queue.append((smart_wheel, self.GUI_CONNECTION_NAME, config.name))
+        self.gui_set_label_queue.append((smart_wheel, self.GUI_CONNECTION_INFO, str(config)))
 
     def update_gui_from_wheel(self, smart_wheel):
         """
