@@ -227,6 +227,7 @@ class Interface():
         menu_file = tk.Menu(menu)
         menu.add_cascade(label='File', menu=menu_file)
         menu_file.add_command(label='New Wheel', command=self.new_wheel)
+        menu_file.add_command(label='Delete selected wheel', command=self.delete_wheel)
         menu_file.add_command(label='Quit', command=self.quit)
         
         # tabs
@@ -507,6 +508,8 @@ class Interface():
         self.make_gui_for_smart_wheel(new_sm)
         self.smart_wheels.append(new_sm)
 
+        self.note.select(len(self.smart_wheels) - 1)  # select by index: last one
+
         # pop up config for initial configuration
         config_gui(
             tk.Toplevel(self.root), 
@@ -514,7 +517,12 @@ class Interface():
             connection_config=new_sm.connection.conf)
 
     def delete_wheel(self):
-        pass
+        selected_tab = self.note.select()
+        idx = self.note.index(selected_tab)
+        logger.info("Delete wheel from gui: %s, idx=%d" % (self.note.tab(selected_tab, "text"), idx))
+        smw = self.smart_wheels.pop(idx)
+        smw.shut_down()
+        self.note.forget(selected_tab)
 
     def on_resize(self, event):
         logger.info('Resizing...')
