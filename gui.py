@@ -81,6 +81,8 @@ class SWMGuiElements(SWM):
         # store the gui update thread: essentially only updates incoming messages in the text box
         # self.gui_update_thread = None  
 
+        self.tab_id = None  # the attached GUI tab
+
     def set_elem(self, elem_name, elem_value):
         self.elements[elem_name] = elem_value
 
@@ -248,9 +250,52 @@ class Interface():
         self.last_slow_update = time.time()
         self.gui_message_queue = []  # (smart_wheel, msg)
         self.gui_set_label_queue = []  # (smart_wheel, label_name, text)
+        self.gui_set_tab_name_queue = []  # tab, text
         self.update_me()
 
-    def make_gui_for_smart_wheel(self, smart_wheel):
+    def update_me(self):
+        """ 
+        main thread for updating GUI stuff. 
+
+        all changes must be done here 
+        """
+    
+        check_time = time.time()
+        if check_time - self.last_slow_update > UPDATE_TIME_SLOW:
+            self.last_slow_update = check_time
+
+            for smart_wheel in self.smart_wheels:
+                if smart_wheel.wheel_gui is not None:
+                    smart_wheel.wheel_gui.update_status_from_wheel()
+
+                self.update_gui_from_wheel(smart_wheel)
+              
+        # messages
+        try:
+            target, msg = self.gui_message_queue.pop(0)
+            self._message(target, msg)
+        except:
+            # empty queue
+            pass
+
+        # set_label
+        try:
+            sw, label_name, txt = self.gui_set_label_queue.pop(0)
+            sw.set_label(label_name, txt)
+        except:
+            pass
+
+        # tab
+        try:
+            tab_id, txt = self.gui_set_tab_name_queue.pop(0)
+            logger.info("tab name %r, %s" % (tab_id, txt))
+            self.note.tab(tab_id, **dict(text=txt))
+        except:
+            pass
+
+        self.mainframe.after(10, self.update_me)
+
+    def make_gui_for_smart_wheel(self, smart_wheel, position="end"):
         """
         Create a GUI for given smart wheel and put it in self.note.
 
@@ -258,6 +303,8 @@ class Interface():
         (means that some output will be seen in the message box)
 
         Afterwards the GUI is updated with the smart wheel state.
+
+        Position is ttk.Notebooks index: either an integer or "end"
         """
         new_tab = ttk.Frame(self.note)
             
@@ -450,8 +497,7 @@ class Interface():
         #     label_args=dict(relief=tk.SUNKEN, anchor=tk.W))
         # status.grid(row=row, column=0)
         
-        self.note.add(new_tab, text="%s" % (smart_wheel.name))
-
+        self.note.insert(position, new_tab, text="%s" % (smart_wheel.name))
         # start a thread for listening the smart wheel
         # update_thread = threading.Thread(target=self.update_thread_fun(smart_wheel))
         # update_thread.start()
@@ -461,40 +507,13 @@ class Interface():
         smart_wheel.subscribe(self.message)
         self.update_gui_elements(smart_wheel)
 
+        # TODO: how to better get tab_id?
+        if position == 'end':
+            tab_id = self.note.tabs()[-1]
+        else:
+            tab_id = self.note.tabs()[position]
 
-    def update_me(self):
-        """ 
-        main thread for updating GUI stuff. 
-
-        all changes must be done here 
-        """
-    
-        check_time = time.time()
-        if check_time - self.last_slow_update > UPDATE_TIME_SLOW:
-            self.last_slow_update = check_time
-
-            for smart_wheel in self.smart_wheels:
-                if smart_wheel.wheel_gui is not None:
-                    smart_wheel.wheel_gui.update_status_from_wheel()
-
-                self.update_gui_from_wheel(smart_wheel)
-              
-        # messages
-        try:
-            target, msg = self.gui_message_queue.pop(0)
-            self._message(target, msg)
-        except:
-            # empty queue
-            pass
-
-        # set_label
-        try:
-            sw, label_name, txt = self.gui_set_label_queue.pop(0)
-            sw.set_label(label_name, txt)
-        except:
-            pass
-
-        self.mainframe.after(10, self.update_me)
+        smart_wheel.tab_id = tab_id
 
     def new_wheel(self):
         """
@@ -505,10 +524,17 @@ class Interface():
         conn = connection.Connection()
         new_sm = SWMGuiElements(connection=conn)
 
-        self.make_gui_for_smart_wheel(new_sm)
-        self.smart_wheels.append(new_sm)
+        all_tabs = self.note.tabs()
+        if len(all_tabs) == 0:
+            new_pos = 0
+            new_pos_tk = "end"
+        else:
+            new_pos = self.note.index(self.note.select()) + 1  # new tab is after currently selected tab
+            new_pos_tk = new_pos if new_pos < len(all_tabs) else "end"
+        self.make_gui_for_smart_wheel(new_sm, position=new_pos_tk)
+        self.smart_wheels.insert(new_pos, new_sm)
 
-        self.note.select(len(self.smart_wheels) - 1)  # select by index: last one
+        self.note.select(new_pos)  # select by index
 
         # pop up config for initial configuration
         config_gui(
@@ -688,6 +714,7 @@ class Interface():
         smart_wheel.connection.conf = config
         self.gui_set_label_queue.append((smart_wheel, self.GUI_CONNECTION_NAME, config.name))
         self.gui_set_label_queue.append((smart_wheel, self.GUI_CONNECTION_INFO, str(config)))
+        self.gui_set_tab_name_queue.append((smart_wheel.tab_id, config.name))
 
     def update_gui_from_wheel(self, smart_wheel):
         """
