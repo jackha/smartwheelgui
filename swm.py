@@ -65,7 +65,7 @@ class SWM(object):
     STATE_CONNECTED = 'connected'
     STATE_NOT_CONNECTED = 'not-connected'
 
-    def __init__(self, connection, update_period=.2):
+    def __init__(self, connection, update_period=.2, populate_incoming=False):
         """
         connection object
         update_period in seconds: poll info approximately at this rate
@@ -99,7 +99,13 @@ class SWM(object):
         self._write_thread = threading.Thread(target=self.write_thread)
         self._write_thread.start()
 
-        self.incoming = []  # to be filled with read data
+        # to be filled with read data
+        # if you want to do something with the raw smart wheel responses yourself.
+        # (if populate_incoming)
+        self.incoming = []  
+
+        # determines if self.incoming is being populated as messages come in.
+        self.populate_incoming = populate_incoming  
 
         # report subscription: who wants to know my (debug) info??
         self.report_to = []
@@ -146,8 +152,9 @@ class SWM(object):
                             cleaned_item = item.strip()
                             if cleaned_item:
                                 # split and filter out empty items
-                                cleaned_item_split = [i for i in cleaned_item.split(',') if i != '']  
-                                self.incoming.append(cleaned_item_split)
+                                cleaned_item_split = [i for i in cleaned_item.split(',') if i != '']
+                                if self.populate_incoming:
+                                    self.incoming.append(cleaned_item_split)
                                 # store me
                                 self.cmd_from_wheel[cleaned_item_split[0]] = cleaned_item_split
                                 self.cmd_counters[cleaned_item_split[0]] += 1

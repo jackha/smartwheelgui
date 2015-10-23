@@ -147,7 +147,7 @@ class ConnectionConfig(object):
         self.comport = None
         self.baudrate = None  # int
         self.timeout = 0  # int
-        self.name = None
+        self.name = 'connection-name'
         self.ip_address = None
         self.ethernet_port = None
         self.connection_type = self.CONNECTION_TYPE_SERIAL
@@ -260,7 +260,7 @@ class Connection(object):
     """
 
     def __init__(self):
-        self.conf = None
+        self.conf = ConnectionConfig()
         # self.connection_class = None
         self.connection = None  # it will remain None until 'connect' is called
         self.last_error = ''
