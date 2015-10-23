@@ -36,6 +36,8 @@ UPDATE_TIME = 0.01
 UPDATE_TIME_SLOW = 0.2
 
 GUI_STATE_FILENAME = '_guistate.json'
+# TODO: to be used
+DEFAULT_CONFIGS = ['default_propeller.json', 'default_mock.json', 'default_ethernet.json', ]
 
 LOG_PATH = './logs'
 
@@ -123,13 +125,18 @@ class SWMGuiElements(SWM):
         _var.set(elem_value)
         self.elements[elem_var_name] = _var
         
-        label = ttk.Entry(
+        obj = ttk.Entry(
             frame, 
             textvariable=self.elements[elem_var_name],
             **elem_args
             )
-        self.elements[elem_name] = label
-        return label
+        self.elements[elem_name] = obj
+        return obj
+
+    def create_text(self, frame, elem_name, elem_args={}):
+        obj = tk.Text(frame, **elem_args)
+        self.elements[elem_name] = obj
+        return obj
 
     def set_label(self, elem_name, elem_value):
         """
@@ -181,6 +188,9 @@ class Interface():
     GUI_VIN = 'vin'
     GUI_COUNTERS = 'counters'
 
+    GUI_INPUT_FIELD = 'input_field'
+    GUI_OUTPUT_FIELD = 'output_field'
+
     PADDING = '10 2 10 4'
 
     def __init__(self, root, smart_wheels):
@@ -215,13 +225,12 @@ class Interface():
         note.grid(row=0, column=0)
 
         self.smart_wheels = smart_wheels
-        self.gui_elements = {}
-
+        
         self.steer_set_point = 0
         self.speed_set_point = 0
         
-        for i, smart_wheel in enumerate(smart_wheels):  # every smart_wheel must have a unique name
-            self.gui_elements[smart_wheel.name] = {}
+        for smart_wheel in smart_wheels:  # every smart_wheel must have a unique name
+            self.make_gui_for_smart_wheel(smart_wheel)
             new_tab = ttk.Frame(note)
             
             row = 0
@@ -384,9 +393,9 @@ class Interface():
             
             # input command
             row += 1
-            input_field = ttk.Entry(new_tab)
+            # input_field = ttk.Entry(new_tab)
+            input_field = smart_wheel.create_entry(new_tab, self.GUI_INPUT_FIELD, '', elem_args={})
             input_field.grid(row=row, column=0, columnspan=4, sticky=tk.NSEW)
-            self.gui_elements[smart_wheel.name]['input_field'] = input_field
 
             # <return> executes the command
             input_field.bind('<Return>', self.event_fun(smart_wheel, new_tab))
@@ -397,10 +406,12 @@ class Interface():
             scrollbar = tk.Scrollbar(new_tab)
             scrollbar.grid(row=row, column=5, columnspan=4, rowspan=3, sticky=tk.E)
 
-            output_field = tk.Text(new_tab, yscrollcommand=scrollbar.set)
+            # output_field = tk.Text(new_tab, yscrollcommand=scrollbar.set)
+            output_field = smart_wheel.create_text(
+                new_tab, self.GUI_OUTPUT_FIELD, 
+                elem_args=dict(yscrollcommand=scrollbar.set))
             output_field.grid(
                 row=row, column=0, columnspan=4, rowspan=3, sticky=tk.NSEW)
-            self.gui_elements[smart_wheel.name]['output_field'] = output_field
 
             scrollbar.config(command=output_field.yview)
 
@@ -411,7 +422,7 @@ class Interface():
             #     label_args=dict(relief=tk.SUNKEN, anchor=tk.W))
             # status.grid(row=row, column=0)
             
-            note.add(new_tab, text="%d %s" % (i, smart_wheel.name))
+            note.add(new_tab, text="%s" % (smart_wheel.name))
 
             # start a thread for listening the smart wheel
             update_thread = threading.Thread(target=self.update_thread_fun(smart_wheel))
@@ -427,6 +438,13 @@ class Interface():
         self.gui_message_queue = []  # (smart_wheel, msg)
         self.gui_set_label_queue = []  # (smart_wheel, label_name, text)
         self.update_me()
+
+    def make_gui_for_smart_wheel(self, smart_wheel):
+        """
+        Create a GUI for given smart wheel.
+
+        side effects: update smart_wheel.wheel_gui
+        """
 
     def update_me(self):
         # main thread for updating GUI stuff.
@@ -462,14 +480,18 @@ class Interface():
         """
         Add new wheel
         """
-        logger.info('Add new wheel (not yet implemented)')
+        logger.info('Add new wheel')
+
+        conn = connection.Connection()
+        new_sm = SWMGuiElements(connection=conn)
+        self.smart_modules.append(new_sm)
 
     def on_resize(self, event):
         logger.info('Resizing...')
 
     def quit(self):
         """
-        Add new wheel
+        Quit
         """
         logger.info('Quit')
         self.i_wanna_live = False
@@ -513,7 +535,7 @@ class Interface():
         return fun
 
     def handle_command(self, smart_wheel, tab, event):
-        command = self.gui_elements[smart_wheel.name]['input_field'].get()
+        command = smart_wheel.get_elem(self.GUI_INPUT_FIELD).get()
         logger.debug("Handle: %s" % command)
         try:
             result = smart_wheel.command(command + '\r\n')
@@ -558,9 +580,6 @@ class Interface():
             if action == 'reset':
                 sent = smart_wheel.reset()
                 self.message(smart_wheel, '-> [%s]' % sent.strip())
-                # input_value = self.gui_elements[smart_wheel.name]['input_field'].get()
-                # print("input field value = %s" % input_value)
-                # self.gui_elements[smart_wheel.name]['output_field'].insert('end -1 chars', input_value + '\n')
             elif action == 'connect':
                 if not smart_wheel.connection.is_connected():
                     try:
@@ -571,7 +590,6 @@ class Interface():
                         self.message(smart_wheel, 'ERROR connecting: %s' % smart_wheel.connection.last_error)
                 else:
                     self.message(smart_wheel, 'Already connected. Disconnect first')
-                # self.gui_elements[smart_wheel.name]['connect_btn'].textvariable = tk.StringVar(self.root, self.TEXT_DISCONNECT)
             elif action == 'disconnect':
                 if smart_wheel.connection.is_connected():
                     smart_wheel.disconnect()
@@ -606,20 +624,20 @@ class Interface():
                     self.message(smart_wheel, '-> [%s]' % sent.strip())
                 else:
                     self.message(smart_wheel, 'ignored, already disabled')
-            elif action == 'enable-disable':
-                sent = None
-                if 'selected' in self.gui_elements[smart_wheel.name]['enable_checkbutton'].state():
-                    if not smart_wheel.enabled:
-                        sent = smart_wheel.enable()
-                    else:
-                        self.message(smart_wheel, 'ignored: smart wheel already enabled')
-                else:
-                    if smart_wheel.enabled:
-                        sent = smart_wheel.disable()
-                    else:
-                        self.message(smart_wheel, 'ignored: smart wheel already disabled')
-                if sent:
-                    self.message(smart_wheel, '-> [%s]' % sent.strip())
+            # elif action == 'enable-disable':
+            #     sent = None
+            #     if 'selected' in self.gui_elements[smart_wheel.name]['enable_checkbutton'].state():
+            #         if not smart_wheel.enabled:
+            #             sent = smart_wheel.enable()
+            #         else:
+            #             self.message(smart_wheel, 'ignored: smart wheel already enabled')
+            #     else:
+            #         if smart_wheel.enabled:
+            #             sent = smart_wheel.disable()
+            #         else:
+            #             self.message(smart_wheel, 'ignored: smart wheel already disabled')
+            #     if sent:
+            #         self.message(smart_wheel, '-> [%s]' % sent.strip())
 
         except NotConnectedException as err:
             self.message(smart_wheel, 'Oops, there was an error: {}'.format(err))
@@ -715,8 +733,8 @@ class Interface():
         """
         The actual message function that must be called from the main thread
         """
-        self.gui_elements[smart_wheel.name]['output_field'].insert('end -1 chars', msg + '\n')
-        self.gui_elements[smart_wheel.name]['output_field'].yview('end -1 chars')  # scroll down
+        smart_wheel.get_elem(self.GUI_OUTPUT_FIELD).insert('end -1 chars', msg + '\n')
+        smart_wheel.get_elem(self.GUI_OUTPUT_FIELD).yview('end -1 chars')  # scroll down
 
 
 def main():
