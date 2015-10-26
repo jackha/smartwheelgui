@@ -319,7 +319,7 @@ class WheelGUI(object):
 
 
 def wheel_gui(root, parent=None, smart_wheel=None,):
-    root.title("Wheel: %s" % str(smart_wheel))
+    root.title("Details: %s" % str(smart_wheel))
     root.columnconfigure(0, weight=1)
     root.rowconfigure(0, weight=1)
 

@@ -451,15 +451,20 @@ class Interface():
 
         # speed
         row += 1
+        ttk.Label(label_frame_wheel, text="actual").grid(row=row, column=1, sticky=tk.E)
+        ttk.Label(label_frame_wheel, text="sent").grid(row=row, column=2, sticky=tk.E)
+        ttk.Label(label_frame_wheel, text="control").grid(row=row, column=4)
+        
+        row += 1
         ttk.Label(label_frame_wheel, text="Speed").grid(row=row, column=0, sticky=tk.E)
 
         label = smart_wheel.create_label(
-            label_frame_wheel, self.GUI_SPEED_SET_POINT, 
-            str(self.speed_set_point))
-        label.grid(row=row, column=1, sticky=tk.E)
-        label = smart_wheel.create_label(
             label_frame_wheel, self.GUI_SPEED_ACTUAL, 
             '-')
+        label.grid(row=row, column=1, sticky=tk.E)
+        label = smart_wheel.create_label(
+            label_frame_wheel, self.GUI_SPEED_SET_POINT, 
+            str(self.speed_set_point))
         label.grid(row=row, column=2, sticky=tk.E)
         
         speed_scale = ttk.Scale(label_frame_wheel, 
@@ -474,12 +479,12 @@ class Interface():
         ttk.Label(label_frame_wheel, text="Steer").grid(row=row, column=0, sticky=tk.E)
 
         label = smart_wheel.create_label(
-            label_frame_wheel, self.GUI_STEER_SET_POINT, 
-            str(self.steer_set_point))
-        label.grid(row=row, column=1, sticky=tk.E)
-        label = smart_wheel.create_label(
             label_frame_wheel, self.GUI_STEER_ACTUAL, 
             '-')
+        label.grid(row=row, column=1, sticky=tk.E)
+        label = smart_wheel.create_label(
+            label_frame_wheel, self.GUI_STEER_SET_POINT, 
+            str(self.steer_set_point))
         label.grid(row=row, column=2, sticky=tk.E)
         
         steer_scale = ttk.Scale(label_frame_wheel, 
@@ -488,14 +493,18 @@ class Interface():
             command=self.set_steer_fun(smart_wheel))
         steer_scale.grid(row=row, column=4)
         smart_wheel.set_elem(self.GUI_STEER_SCALE, steer_scale)
-        
+
+        # console
+        label_frame_console = ttk.Labelframe(new_tab, text='Console', padding=self.PADDING)
+        label_frame_console.grid(row=row, column=0, columnspan=4, sticky="nsew")
+
         # input command label
         row += 1
-        ttk.Label(new_tab, text="Manual input command (see reference manual for commands), enter to send:").grid(row=row, column=0, sticky=tk.W)
+        ttk.Label(label_frame_console, text="Manual input command (see reference manual for commands), enter to send:").grid(row=row, column=0, sticky=tk.W)
         # input command
         row += 1
         # input_field = ttk.Entry(new_tab)
-        input_field = smart_wheel.create_entry(new_tab, self.GUI_INPUT_FIELD, '', elem_args={})
+        input_field = smart_wheel.create_entry(label_frame_console, self.GUI_INPUT_FIELD, '', elem_args={})
         input_field.grid(row=row, column=0, columnspan=4, sticky=tk.NSEW)
 
         # <return> executes the command
@@ -503,17 +512,17 @@ class Interface():
 
         # output label
         row += 1
-        ttk.Label(new_tab, text="Output (see command prompt for more detail):").grid(row=row, column=0, sticky=tk.W)
+        ttk.Label(label_frame_console, text="Output (see command prompt for more detail):").grid(row=row, column=0, sticky=tk.W)
         
         # output to user
         row += 1
 
-        scrollbar = tk.Scrollbar(new_tab)
+        scrollbar = tk.Scrollbar(label_frame_console)
         scrollbar.grid(row=row, column=5, columnspan=4, rowspan=3, sticky=tk.E)
 
         # output_field = tk.Text(new_tab, yscrollcommand=scrollbar.set)
         output_field = smart_wheel.create_text(
-            new_tab, self.GUI_OUTPUT_FIELD, 
+            label_frame_console, self.GUI_OUTPUT_FIELD, 
             elem_args=dict(yscrollcommand=scrollbar.set))
         output_field.grid(
             row=row, column=0, columnspan=4, rowspan=3, sticky=tk.NSEW)
@@ -849,7 +858,7 @@ def main():
     logger.info("command line arguments: %s" % str(args))
 
     root = tk.Tk()
-    root.title("SmartWheel")
+    root.title("SmartWheel controller")
 
     smart_modules = []
     smart_wheels_loaded = False
