@@ -21,6 +21,9 @@ import logging
 
 # from listports import serial_ports
 from serial.tools.list_ports import comports
+# for secundary osx comport detection
+import os
+import sys
 
 logger = logging.getLogger(__name__)
 
@@ -246,7 +249,13 @@ def config_gui(root, parent=None, smart_wheel=None, connection_config=None):
     root.rowconfigure(0, weight=1)
 
     # we get a list of: [port, desc, hwid], desc and hwid is seen as 'n/a'
-    com_ports = comports()  
+    com_ports = comports()
+    logger.info('Possible comports: %r' % str(com_ports))
+    if not com_ports and os.name == 'posix' and sys.platform.lower() == 'darwin':  # osx
+        import glob
+        com_ports = [[p, 'n/a', 'n/a'] for p in glob.glob('/dev/tty.*')]
+        if com_ports:
+            logger.info('Found comports on OSX using secundary method: %r' % str(com_ports))
     if not com_ports:
         com_ports.append(['no ports found', 'n/a', 'n/a'])
     gui = ConfigGUI(
