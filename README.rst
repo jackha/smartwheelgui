@@ -1,3 +1,18 @@
+Overview
+--------
+
+This repository consist of a set of python tools written for the Opteq Smart 
+Wheel Module (SWM in short).
+
+- a GUI: The GUI has a set of basic operation commands as well as monitoring 
+  functions.
+
+- a python wrapper class SWM: this class can be used in your own program to
+  control and monitor the SWM.
+
+http://www.opteq.nl/
+
+
 Prerequisities
 --------------
 
@@ -12,6 +27,7 @@ macosx::
 new ActiveTcl
 
 https://www.python.org/download/mac/tcltk/
+
 
 Ubuntu / raspbian
 -----------------
@@ -36,24 +52,13 @@ Install your PyPI packages: run
 Features
 --------
 
-
 Start the gui::
 
     $ python3 gui.py
 
-Start the config screen::
+You should see the main wheel control screen (using default settings). You can 
+manage them using the Config button and the File menu.
 
-    $ python3 config.py
-
-
-In the gui, you can:
-
-- Connect 
-
-- Reset
-
-- Type in commands manually
-
-- Enable, disable
-
-- Each wheel has a connection configuration as wel as a wheel configuration
+When the program is closed, the state is saved in _guistate.json. If 
+_guistate.json is deleted, the next time the GUI is started with the default
+settings.
