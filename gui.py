@@ -402,6 +402,11 @@ class Interface():
         row += 1
         label_frame_wheel = ttk.Labelframe(new_tab, text='Wheel', padding=self.PADDING)
         label_frame_wheel.grid(row=row, column=0, columnspan=4, sticky="nsew")
+        label_frame_wheel.columnconfigure(0, weight=1)
+        label_frame_wheel.columnconfigure(1, weight=1)
+        label_frame_wheel.columnconfigure(2, weight=1)
+        label_frame_wheel.columnconfigure(3, weight=1)
+        label_frame_wheel.columnconfigure(4, weight=100)
 
         button = smart_wheel.create_button(
             label_frame_wheel, 
@@ -461,7 +466,7 @@ class Interface():
             from_=200, to=-200, 
             orient=tk.VERTICAL,
             command=self.set_speed_fun(smart_wheel))
-        speed_scale.grid(row=row, column=3)
+        speed_scale.grid(row=row, column=4)
         smart_wheel.set_elem(self.GUI_SPEED_SCALE, speed_scale)
         
         # steer
@@ -481,7 +486,7 @@ class Interface():
             from_=-1800, to=1800,
             orient=tk.HORIZONTAL,
             command=self.set_steer_fun(smart_wheel))
-        steer_scale.grid(row=row, column=3)
+        steer_scale.grid(row=row, column=4)
         smart_wheel.set_elem(self.GUI_STEER_SCALE, steer_scale)
         
         # input command label
