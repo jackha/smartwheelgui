@@ -422,45 +422,67 @@ class Interface():
             self.button_fun(smart_wheel, new_tab, 'wheel-gui'))
         button.grid(row=0, column=2)
         
-        row += 1
-        ttk.Label(new_tab, text="Speed").grid(row=row, column=0)
-        #ttk.Label(new_tab, text="200").grid(row=row, column=1)
-        label = smart_wheel.create_label(
-            new_tab, self.GUI_SPEED_SET_POINT, 
-            str(self.speed_set_point))
-        label.grid(row=row, column=1)
-        label = smart_wheel.create_label(
-            new_tab, self.GUI_SPEED_ACTUAL, 
-            '-')
-        label.grid(row=row, column=2)
+        # row += 1
+        # ttk.Label(new_tab, text="Speed").grid(row=row, column=0, sticky=tk.E)
+        # label = smart_wheel.create_label(
+        #     new_tab, self.GUI_SPEED_SET_POINT, 
+        #     str(self.speed_set_point))
+        # label.grid(row=row, column=1, sticky=tk.W)
+        # label = smart_wheel.create_label(
+        #     new_tab, self.GUI_SPEED_ACTUAL, 
+        #     '-')
+        # label.grid(row=row, column=2, sticky=tk.W)
 
-        row += 1
-        ttk.Label(new_tab, text="Steer").grid(row=row, column=0)
-        label = smart_wheel.create_label(
-            new_tab, self.GUI_STEER_SET_POINT, 
-            str(self.steer_set_point))
-        label.grid(row=row, column=1)
-        label = smart_wheel.create_label(
-            new_tab, self.GUI_STEER_ACTUAL, 
-            '-')
-        label.grid(row=row, column=2)
+        # row += 1
+        # ttk.Label(new_tab, text="Steer").grid(row=row, column=0, sticky=tk.E)
+        # label = smart_wheel.create_label(
+        #     new_tab, self.GUI_STEER_SET_POINT, 
+        #     str(self.steer_set_point))
+        # label.grid(row=row, column=1, sticky=tk.W)
+        # label = smart_wheel.create_label(
+        #     new_tab, self.GUI_STEER_ACTUAL, 
+        #     '-')
+        # label.grid(row=row, column=2, sticky=tk.W)
 
         row += 1
         speed_scale = ttk.Scale(new_tab, 
             from_=200, to=-200, 
             orient=tk.VERTICAL,
             command=self.set_speed_fun(smart_wheel))
-        speed_scale.grid(row=row, column=2)
+        speed_scale.grid(row=row, column=3)
         smart_wheel.set_elem(self.GUI_SPEED_SCALE, speed_scale)
+        ttk.Label(new_tab, text="Speed").grid(row=row, column=0, sticky=tk.E)
+
+        label = smart_wheel.create_label(
+            new_tab, self.GUI_SPEED_SET_POINT, 
+            str(self.speed_set_point))
+        label.grid(row=row, column=1, sticky=tk.W)
+        label = smart_wheel.create_label(
+            new_tab, self.GUI_SPEED_ACTUAL, 
+            '-')
+        label.grid(row=row, column=2, sticky=tk.W)
         
         row += 1
         steer_scale = ttk.Scale(new_tab, 
             from_=-1800, to=1800,
             orient=tk.HORIZONTAL,
             command=self.set_steer_fun(smart_wheel))
-        steer_scale.grid(row=row, column=0, columnspan=3)
+        steer_scale.grid(row=row, column=3)
         smart_wheel.set_elem(self.GUI_STEER_SCALE, steer_scale)
+        ttk.Label(new_tab, text="Steer").grid(row=row, column=0, sticky=tk.E)
+
+        label = smart_wheel.create_label(
+            new_tab, self.GUI_STEER_SET_POINT, 
+            str(self.steer_set_point))
+        label.grid(row=row, column=1, sticky=tk.W)
+        label = smart_wheel.create_label(
+            new_tab, self.GUI_STEER_ACTUAL, 
+            '-')
+        label.grid(row=row, column=2, sticky=tk.W)
         
+        # input command label
+        row += 1
+        ttk.Label(new_tab, text="Manual input command (see reference manual for commands), enter to send:").grid(row=row, column=0, sticky=tk.W)
         # input command
         row += 1
         # input_field = ttk.Entry(new_tab)
@@ -470,7 +492,11 @@ class Interface():
         # <return> executes the command
         input_field.bind('<Return>', self.event_fun(smart_wheel, new_tab))
 
-        # command result
+        # output label
+        row += 1
+        ttk.Label(new_tab, text="Output (see command prompt for more detail):").grid(row=row, column=0, sticky=tk.W)
+        
+        # output to user
         row += 1
 
         scrollbar = tk.Scrollbar(new_tab)

@@ -22,7 +22,8 @@ pyserial::
 
     $ pip install pyserial
 
-macosx::
+macosx
+======
 
 new ActiveTcl
 
@@ -30,7 +31,7 @@ https://www.python.org/download/mac/tcltk/
 
 
 Ubuntu / raspbian
------------------
+=================
 
 Install package python3-setuptools: run 
 
@@ -62,3 +63,6 @@ manage them using the Config button and the File menu.
 When the program is closed, the state is saved in _guistate.json. If 
 _guistate.json is deleted, the next time the GUI is started with the default
 settings.
+
+Logfiles are created for every wheel module in the logs subfolder.
+
