@@ -1,3 +1,18 @@
+26/10
+-----
+
+- Logging to file per smart wheel. Logging is more consistent.
+
+- Sending status requests is now in SWM instead of in gui thread. Also 
+  the request is done in 5 Hz (configurable).
+
+- Added menu options 'New Wheel' and 'Delete selected wheel'.
+
+- All tkinter GUI updating is done in the main thread to prevent errors.
+
+- Some refactoring to make the above possible.
+
+
 28/9
 ----
 
