@@ -444,41 +444,45 @@ class Interface():
         #     '-')
         # label.grid(row=row, column=2, sticky=tk.W)
 
+        # speed
         row += 1
-        speed_scale = ttk.Scale(new_tab, 
+        ttk.Label(label_frame_wheel, text="Speed").grid(row=row, column=0, sticky=tk.E)
+
+        label = smart_wheel.create_label(
+            label_frame_wheel, self.GUI_SPEED_SET_POINT, 
+            str(self.speed_set_point))
+        label.grid(row=row, column=1, sticky=tk.E)
+        label = smart_wheel.create_label(
+            label_frame_wheel, self.GUI_SPEED_ACTUAL, 
+            '-')
+        label.grid(row=row, column=2, sticky=tk.E)
+        
+        speed_scale = ttk.Scale(label_frame_wheel, 
             from_=200, to=-200, 
             orient=tk.VERTICAL,
             command=self.set_speed_fun(smart_wheel))
         speed_scale.grid(row=row, column=3)
         smart_wheel.set_elem(self.GUI_SPEED_SCALE, speed_scale)
-        ttk.Label(new_tab, text="Speed").grid(row=row, column=0, sticky=tk.E)
+        
+        # steer
+        row += 1
+        ttk.Label(label_frame_wheel, text="Steer").grid(row=row, column=0, sticky=tk.E)
 
         label = smart_wheel.create_label(
-            new_tab, self.GUI_SPEED_SET_POINT, 
-            str(self.speed_set_point))
-        label.grid(row=row, column=1, sticky=tk.W)
+            label_frame_wheel, self.GUI_STEER_SET_POINT, 
+            str(self.steer_set_point))
+        label.grid(row=row, column=1, sticky=tk.E)
         label = smart_wheel.create_label(
-            new_tab, self.GUI_SPEED_ACTUAL, 
+            label_frame_wheel, self.GUI_STEER_ACTUAL, 
             '-')
-        label.grid(row=row, column=2, sticky=tk.W)
+        label.grid(row=row, column=2, sticky=tk.E)
         
-        row += 1
-        steer_scale = ttk.Scale(new_tab, 
+        steer_scale = ttk.Scale(label_frame_wheel, 
             from_=-1800, to=1800,
             orient=tk.HORIZONTAL,
             command=self.set_steer_fun(smart_wheel))
         steer_scale.grid(row=row, column=3)
         smart_wheel.set_elem(self.GUI_STEER_SCALE, steer_scale)
-        ttk.Label(new_tab, text="Steer").grid(row=row, column=0, sticky=tk.E)
-
-        label = smart_wheel.create_label(
-            new_tab, self.GUI_STEER_SET_POINT, 
-            str(self.steer_set_point))
-        label.grid(row=row, column=1, sticky=tk.W)
-        label = smart_wheel.create_label(
-            new_tab, self.GUI_STEER_ACTUAL, 
-            '-')
-        label.grid(row=row, column=2, sticky=tk.W)
         
         # input command label
         row += 1
