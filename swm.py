@@ -2,9 +2,13 @@ import json
 import threading
 import connection
 import logging
+import time
 
+from collections import defaultdict
 from time import sleep
 from serial import Serial
+
+logger = logging.getLogger(__name__)
 
 
 def connected_fun(func):
@@ -18,6 +22,11 @@ def connected_fun(func):
         else:
             return func(self, *args, **kwargs)
     return fun
+
+
+def slugify(s):
+    """non foolproof, but easy slugify function"""
+    return s.lower().replace(' ', '-')
 
 
 class SWM(object):
@@ -39,24 +48,36 @@ class SWM(object):
     CMD_LOAD_FROM_CONTROLLER = '$97'
     CMD_STORE_IN_CONTROLLER = '$98'
 
+    POLL_COMMANDS = [
+        ('$10', False),  # actual values
+        ('$11', False),
+        ('$13', False),
+        ('$15', False),
+        ('$29', True),
+        ('$50', False),
+        ('$58', False),
+        ('$59', False),
+        ('$60', True),    
+    ]
+
     SEPARATOR = '|'    
 
     STATE_CONNECTED = 'connected'
     STATE_NOT_CONNECTED = 'not-connected'
 
-    def __init__(self, connection):
-        #port, baudrate, timeout=10, name='', serial_wrapper=Serial):
+    def __init__(self, connection, update_period=.2, populate_incoming=False):
         """
-        port + baudrate
+        connection object
+        update_period in seconds: poll info approximately at this rate
         """
-        #self.serial_port = port
-        #self.baudrate = baudrate
 
         self.connection = connection
+        self.update_period = update_period
 
         self.counter = 0
         self.enabled = False
         self.name = self.connection.conf.name
+        self.slug = slugify(self.name)
 
         # self.connected = False
 
@@ -78,13 +99,31 @@ class SWM(object):
         self._write_thread = threading.Thread(target=self.write_thread)
         self._write_thread.start()
 
-        self.incoming = []  # to be filled with read data
+        # to be filled with read data
+        # if you want to do something with the raw smart wheel responses yourself.
+        # (if populate_incoming)
+        self.incoming = []  
+
+        # determines if self.incoming is being populated as messages come in.
+        self.populate_incoming = populate_incoming  
 
         # report subscription: who wants to know my (debug) info??
         self.report_to = []
 
         # last answers from wheel per command. key is command code, i.e. '$13'
-        self.cmd_from_wheel = {}  
+        self.cmd_from_wheel = {}
+
+        # number of times a command is received
+        self.cmd_counters = defaultdict(int)
+        self.total_reads = 0
+        self.total_writes = 0
+
+        # used to check alivenes of threads
+        self.read_counter = 0
+        self.write_counter = 0
+
+        # for logging
+        self.extra = self._extra()
 
     @classmethod
     def from_config(
@@ -97,19 +136,29 @@ class SWM(object):
         while self.i_wanna_live:
             try:
                 if self.connection.is_connected():
-                    new_read = self.connection.connection.readline()  # let's hope this never crashes
+                    # read a character at a time, until a CR is detected
+                    new_read = ''
+                    read_try = 0
+                    while not new_read and read_try < 100:
+                        new_read = self.connection.connection.readline()
+                        read_try += 1
+
                     if new_read:
-                        data_decoded = new_read
-                        logging.debug("Read: %s" % data_decoded)
-                        data_items = data_decoded.split(self.SEPARATOR)
+                        # something like: $50,10,20,6000,6000,2000,10500,1|
+                        # or: $58,0,0,6094426,0,|
+                        logger.debug("Read: %s" % new_read, extra=self.extra)
+                        data_items = new_read.split(self.SEPARATOR)
                         for item in data_items:
                             cleaned_item = item.strip()
                             if cleaned_item:
                                 # split and filter out empty items
-                                cleaned_item_split = [i for i in cleaned_item.split(',') if i != '']  
-                                self.incoming.append(cleaned_item_split)
+                                cleaned_item_split = [i for i in cleaned_item.split(',') if i != '']
+                                if self.populate_incoming:
+                                    self.incoming.append(cleaned_item_split)
                                 # store me
                                 self.cmd_from_wheel[cleaned_item_split[0]] = cleaned_item_split
+                                self.cmd_counters[cleaned_item_split[0]] += 1
+                                self.total_reads += 1
             except:
                 if self.connection.connection is None:
                     continue
@@ -117,21 +166,44 @@ class SWM(object):
                 if err_msg:
                     self.message('ERROR in read thread from connection: %s' % err_msg)
             sleep(0.01)  # 10 ms sleep
+            self.read_counter += 1
 
     def write_thread(self):
+        next_poll = time.time()
         while self.i_wanna_live:
             try:
                 if self.connection.is_connected():
-                    write_item = self.write_queue.pop(0)
-                    logging.debug("going to write '%s'" % write_item)
-                    self.connection.connection.write(write_item)
+                    while self.write_queue:  # thread safe?
+                        write_item = self.write_queue.pop(0)
+                        # logger.debug("going to write '%s'" % write_item)
+                        self.connection.connection.write(write_item)
+                        self.total_writes += 1
             except:
                 if self.connection.connection is None:
                     continue
                 err_msg = self.connection.connection.get_and_erase_last_error()
                 if err_msg:
                     self.message('ERROR in write thread from connection: %s' % err_msg)
+            
+            # update variables poll
+            if self.connection.is_connected():
+                curr_time = time.time()
+                do_poll = False
+                if (curr_time - next_poll) > 10 * self.update_period:
+                    next_poll = curr_time - self.update_period  # artificially set a new next_poll
+                while next_poll < curr_time:
+                    if do_poll:
+                        # missed some update step
+                        logger.info("missed update step: %s" % next_poll, extra=self.extra)
+                    next_poll += self.update_period
+                    do_poll = True
+                if do_poll:  # in case we missed some update step, just do update once.
+                    logger.debug('update poll', extra=self.extra)
+                    for poll_cmd, poll_once in self.POLL_COMMANDS:
+                        self.command(poll_cmd, once=poll_once)
+
             sleep(0.01)  # 10 ms sleep
+            self.write_counter += 1
 
     def subscribe(self, callback_fun):
         """Subscribe instance for messages. will be called with (smart_wheel instance, message)"""
@@ -139,13 +211,14 @@ class SWM(object):
 
     def connect(self):
         self.message("connect")
-        logging.info("going to connect to connection!!")
-        logging.debug(str(self.connection))
+        logger.info("going to connect to connection!!", extra=self.extra)
+        logger.debug(str(self.connection), extra=self.extra)
         # self.serial = self.serial_wrapper(
         #     self.serial_port, self.baudrate, timeout=self.timeout)  # '/dev/ttyS1', 19200, timeout=1
         return self.connection.connect()  # will create connection.connection
 
     def disconnect(self):
+        self.cmd_from_wheel = {}  # reset all we've got from the wheel
         return self.connection.disconnect()
 
     def is_connected(self):
@@ -199,7 +272,7 @@ class SWM(object):
         self.i_wanna_live = False
 
     def message(self, msg, logging_only=False):
-        logging.debug("[%s] %s" % (str(self), msg))
+        logger.debug("[%s] %s" % (str(self), msg), extra=self.extra)
         if not logging_only:
             for callback_fun in self.report_to:
                 callback_fun(self, "[%s] %s" % (str(self), msg))
@@ -209,3 +282,7 @@ class SWM(object):
             self.state = self.STATE_CONNECTED
         else:
             self.state = self.STATE_NOT_CONNECTED
+
+    def _extra(self):
+        """return dict which can be used in logger.info(msg, extra=...)"""
+        return dict(wheel_name=self.name, wheel_slug=self.slug)

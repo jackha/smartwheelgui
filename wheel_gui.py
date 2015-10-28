@@ -36,7 +36,8 @@ def just_try_it(orig_fun, *args, **kwargs):
         except:
             # probably it is just a closed window so some functions don't work anymore
             # change to logger.exception if you want to see the error
-            logger.warning('Something strange happened, but I ignored it')
+            # logger.warning('Something strange happened, but I ignored it')
+            pass
     return fun
 
 
@@ -245,6 +246,9 @@ class WheelGUI(object):
         return fun
 
     def update_status_from_wheel(self):
+        """
+        update gui from status of wheel - only call from main thread
+        """
         # see if dict is sometimes changed during read
         wheel_values = copy.deepcopy(self.smart_wheel.cmd_from_wheel)
 
@@ -315,7 +319,7 @@ class WheelGUI(object):
 
 
 def wheel_gui(root, parent=None, smart_wheel=None,):
-    root.title("Wheel: %s" % str(smart_wheel))
+    root.title("Details: %s" % str(smart_wheel))
     root.columnconfigure(0, weight=1)
     root.rowconfigure(0, weight=1)
 

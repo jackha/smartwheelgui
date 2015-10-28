@@ -21,6 +21,11 @@ import logging
 
 # from listports import serial_ports
 from serial.tools.list_ports import comports
+# for secundary osx comport detection
+import os
+import sys
+
+logger = logging.getLogger(__name__)
 
 
 class ConfigGUI(object):
@@ -151,6 +156,7 @@ class ConfigGUI(object):
         self.name_var.set(config.name)
         self.note.select(self.note_idx[config.connection_type])
         # config.timeout
+        logger.info('State from config: %r' % str(config))
         if config.connection_type == connection.ConnectionConfig.CONNECTION_TYPE_SERIAL:
             self.baud.set(config.baudrate)
             self.ports.set(config.comport)
@@ -198,7 +204,7 @@ class ConfigGUI(object):
         if not filename:  # user probably clicked cancel
             return
         config.save(filename)
-        logging.info("Saved file: %s" % filename)
+        logger.info("Saved file: %s" % filename)
         # logging.info("Quitting...")
         # sys.exit(0)
         if self.parent is not None and self.smart_wheel is not None:
@@ -220,7 +226,7 @@ class ConfigGUI(object):
             return
         config = connection.ConnectionConfig.from_file(filename)
         self.config_backup = config
-        logging.info("Loaded file: %s" % filename)
+        logger.info("Loaded file: %s" % filename)
 
         self.state_from_config(config)
 
@@ -243,7 +249,13 @@ def config_gui(root, parent=None, smart_wheel=None, connection_config=None):
     root.rowconfigure(0, weight=1)
 
     # we get a list of: [port, desc, hwid], desc and hwid is seen as 'n/a'
-    com_ports = comports()  
+    com_ports = comports()
+    logger.info('Possible comports: %r' % str(com_ports))
+    if not com_ports and os.name == 'posix' and sys.platform.lower() == 'darwin':  # osx
+        import glob
+        com_ports = [[p, 'n/a', 'n/a'] for p in glob.glob('/dev/tty.*')]
+        if com_ports:
+            logger.info('Found comports on OSX using secundary method: %r' % str(com_ports))
     if not com_ports:
         com_ports.append(['no ports found', 'n/a', 'n/a'])
     gui = ConfigGUI(
