@@ -242,7 +242,8 @@ class WheelGUI(object):
 
     def store_pid_fun(self, param_idx, entry_name):
         def fun(event): 
-            return self.store_pid(str(param_idx), self.smart_wheel.get_elem(entry_name).get())
+            self.store_pid(str(param_idx), self.smart_wheel.get_elem(entry_name).get())
+            self.smart_wheel.command('$50')
         return fun
 
     def update_status_from_wheel(self):

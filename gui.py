@@ -45,7 +45,7 @@ LOG_PATH = './logs'
 POPULATE_INCOMING = True
 
 # these are the messages actually shown in the gui.
-SHOW_MESSAGES = {'$0', '$1', '$8', '$9', '$15', '$29', '$60'}
+SHOW_MESSAGES = {'$0', '$1', '$8', '$9', '$15', '$29', '$50', '$60'}
 
 
 def smart_wheels_from_state_file(filename):
