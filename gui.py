@@ -426,28 +426,6 @@ class Interface():
             'Edit/Debug', 
             self.button_fun(smart_wheel, new_tab, 'wheel-gui'))
         button.grid(row=0, column=2)
-        
-        # row += 1
-        # ttk.Label(new_tab, text="Speed").grid(row=row, column=0, sticky=tk.E)
-        # label = smart_wheel.create_label(
-        #     new_tab, self.GUI_SPEED_SET_POINT, 
-        #     str(self.speed_set_point))
-        # label.grid(row=row, column=1, sticky=tk.W)
-        # label = smart_wheel.create_label(
-        #     new_tab, self.GUI_SPEED_ACTUAL, 
-        #     '-')
-        # label.grid(row=row, column=2, sticky=tk.W)
-
-        # row += 1
-        # ttk.Label(new_tab, text="Steer").grid(row=row, column=0, sticky=tk.E)
-        # label = smart_wheel.create_label(
-        #     new_tab, self.GUI_STEER_SET_POINT, 
-        #     str(self.steer_set_point))
-        # label.grid(row=row, column=1, sticky=tk.W)
-        # label = smart_wheel.create_label(
-        #     new_tab, self.GUI_STEER_ACTUAL, 
-        #     '-')
-        # label.grid(row=row, column=2, sticky=tk.W)
 
         # speed
         row += 1
@@ -494,13 +472,18 @@ class Interface():
         steer_scale.grid(row=row, column=4)
         smart_wheel.set_elem(self.GUI_STEER_SCALE, steer_scale)
 
+        ############################################
         # console
         label_frame_console = ttk.Labelframe(new_tab, text='Console', padding=self.PADDING)
         label_frame_console.grid(row=row, column=0, columnspan=4, sticky="nsew")
 
         # input command label
+        # !! width=80 strangely applies to all objects here, the input_field and output_field
         row += 1
-        ttk.Label(label_frame_console, text="Manual input command (see reference manual for commands), enter to send:").grid(row=row, column=0, sticky=tk.W)
+        ttk.Label(
+            label_frame_console, 
+            text="Manual input command (see reference manual for commands), enter to send:",
+            width=80).grid(row=row, column=0, sticky=tk.W)
         # input command
         row += 1
         # input_field = ttk.Entry(new_tab)
@@ -512,35 +495,28 @@ class Interface():
 
         # output label
         row += 1
-        ttk.Label(label_frame_console, text="Output (see command prompt for more detail):").grid(row=row, column=0, sticky=tk.W)
+        ttk.Label(
+            label_frame_console, 
+            text="Output (see command prompt for more detail):").grid(row=row, column=0, columnspan=4, sticky=tk.W)
         
         # output to user
         row += 1
 
         scrollbar = tk.Scrollbar(label_frame_console)
-        scrollbar.grid(row=row, column=5, columnspan=4, rowspan=3, sticky=tk.E)
+        scrollbar.grid(row=row, column=5, sticky=tk.E)
 
         # output_field = tk.Text(new_tab, yscrollcommand=scrollbar.set)
         output_field = smart_wheel.create_text(
             label_frame_console, self.GUI_OUTPUT_FIELD, 
-            elem_args=dict(yscrollcommand=scrollbar.set))
+            elem_args=dict(yscrollcommand=scrollbar.set, height=10))
         output_field.grid(
-            row=row, column=0, columnspan=4, rowspan=3, sticky=tk.NSEW)
-
+            row=row, column=0, sticky=tk.NSEW)
         scrollbar.config(command=output_field.yview)
 
-        # status bar
-        # row += 1
-        # status = smart_wheel.create_label(
-        #     mainframe, 'status', 'status info', 
-        #     label_args=dict(relief=tk.SUNKEN, anchor=tk.W))
-        # status.grid(row=row, column=0)
-        
+        ###################################
+        # end of label frames
+
         self.note.insert(position, new_tab, text="%s" % (smart_wheel.name))
-        # start a thread for listening the smart wheel
-        # update_thread = threading.Thread(target=self.update_thread_fun(smart_wheel))
-        # update_thread.start()
-        # smart_wheel.gui_update_thread = update_thread
 
         # subscribe myself for back logging
         smart_wheel.subscribe(self.message)
@@ -795,21 +771,6 @@ class Interface():
                 smart_wheel.read_counter, smart_wheel.write_counter, 
                 smart_wheel.total_reads, smart_wheel.total_writes))
             
-    # Don't think we need this anymore
-    # def update_thread_fun(self, smart_wheel):
-    #     """Thread for listening a specific smart wheel module"""
-    #     def update_thread():
-    #         has_update = True
-    #         while smart_wheel.i_wanna_live:
-    #             while smart_wheel.incoming:
-    #                 new_message = smart_wheel.incoming.pop(0)  # thread safe?
-    #                 logger.debug('new message: %s' % new_message)
-    #                 # too much info
-    #                 # self.message(smart_wheel, '<- %s' % new_message)  # update main gui
-                                     
-    #             time.sleep(UPDATE_TIME)
-    #     return update_thread
-
     def button_fun(self, smart_wheel, tab, action):
         """
         return a button function without parameters with these parameters included 
