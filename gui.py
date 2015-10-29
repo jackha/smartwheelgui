@@ -190,10 +190,12 @@ class Interface():
     GUI_STEER_SET_POINT = 'steer_set_point'
     GUI_STEER_ACTUAL = 'steer_actual'
     GUI_STEER_SCALE = 'steer_scale'
+    GUI_STEER_0_BUTTON = 'steer_stop'
 
     GUI_SPEED_SET_POINT = 'speed_set_point'
     GUI_SPEED_ACTUAL = 'speed_actual'
     GUI_SPEED_SCALE = 'speed_scale'
+    GUI_SPEED_0_BUTTON = 'speed_stop'
 
     GUI_CONNECT_BUTTON = 'connect_button'
     GUI_DISCONNECT_BUTTON = 'disconnect_button'
@@ -460,11 +462,12 @@ class Interface():
             self.button_fun(smart_wheel, new_tab, 'wheel-gui'))
         button.grid(row=0, column=2)
 
+        #####################################
         # speed
         row += 1
         ttk.Label(label_frame_wheel, text="actual").grid(row=row, column=1, sticky=tk.E)
         ttk.Label(label_frame_wheel, text="sent").grid(row=row, column=2, sticky=tk.E)
-        ttk.Label(label_frame_wheel, text="control").grid(row=row, column=4)
+        ttk.Label(label_frame_wheel, text="control").grid(row=row, column=5)
         
         row += 1
         ttk.Label(label_frame_wheel, text="Speed").grid(row=row, column=0, sticky=tk.E)
@@ -477,14 +480,21 @@ class Interface():
             label_frame_wheel, self.GUI_SPEED_SET_POINT, 
             str(self.speed_set_point))
         label.grid(row=row, column=2, sticky=tk.E)
+
+        button = smart_wheel.create_button(
+            label_frame_wheel, 
+            self.GUI_SPEED_0_BUTTON, 
+            'stop', 
+            self.button_fun(smart_wheel, new_tab, 'speed-0'))
+        button.grid(row=row, column=4)
         
         speed_scale = ttk.Scale(label_frame_wheel, 
             from_=200, to=-200, 
             orient=tk.VERTICAL,
             command=self.set_speed_fun(smart_wheel))
-        speed_scale.grid(row=row, column=4)
+        speed_scale.grid(row=row, column=5)
         smart_wheel.set_elem(self.GUI_SPEED_SCALE, speed_scale)
-        
+
         # steer
         row += 1
         ttk.Label(label_frame_wheel, text="Steer").grid(row=row, column=0, sticky=tk.E)
@@ -497,12 +507,19 @@ class Interface():
             label_frame_wheel, self.GUI_STEER_SET_POINT, 
             str(self.steer_set_point))
         label.grid(row=row, column=2, sticky=tk.E)
+
+        button = smart_wheel.create_button(
+            label_frame_wheel, 
+            self.GUI_STEER_0_BUTTON, 
+            '0', 
+            self.button_fun(smart_wheel, new_tab, 'steer-0'))
+        button.grid(row=row, column=4)
         
         steer_scale = ttk.Scale(label_frame_wheel, 
             from_=-1800, to=1800,
             orient=tk.HORIZONTAL,
             command=self.set_steer_fun(smart_wheel))
-        steer_scale.grid(row=row, column=4)
+        steer_scale.grid(row=row, column=5)
         smart_wheel.set_elem(self.GUI_STEER_SCALE, steer_scale)
 
         ############################################
@@ -744,6 +761,12 @@ class Interface():
                     self.message(smart_wheel, '-> [%s]' % sent.strip())
                 else:
                     self.message(smart_wheel, 'ignored, already disabled')
+            elif action == 'speed-0':
+                self.set_speed(smart_wheel, 0)
+                self.message(smart_wheel, 'speed-0')
+            elif action == 'steer-0':
+                self.set_steer(smart_wheel, 0)
+                self.message(smart_wheel, 'steer-0')
 
         except NotConnectedException as err:
             self.message(smart_wheel, 'Oops, there was an error: {}'.format(err))
