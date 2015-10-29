@@ -41,19 +41,31 @@ DEFAULT_CONFIGS = ['default_propeller.json', 'default_mock.json', 'default_ether
 
 LOG_PATH = './logs'
 
+# SWM.incoming will get filled, the gui must pull the messages.
+POPULATE_INCOMING = True
+
+# these are the messages actually shown in the gui.
+SHOW_MESSAGES = {'$0', '$1', '$8', '$9', '$15', '$29', '$60'}
+
 
 def smart_wheels_from_state_file(filename):
+    """
+    Create and return SWM objects defined by state file.
+    """
     smart_modules = []
     with open(GUI_STATE_FILENAME, 'r') as f:
         sm_config = json.load(f)
     for single_config in sm_config:
         conn = connection.Connection.from_dict(single_config['config'])
-        new_sm = SWMGuiElements(connection=conn)
+        new_sm = SWMGuiElements(connection=conn, populate_incoming=POPULATE_INCOMING)
         smart_modules.append(new_sm)
     return smart_modules
 
 
 def state_file_from_smart_wheels(smart_wheels):
+    """
+    Write state file from current smart wheel instances.
+    """
     tabs = []
     for swm in smart_wheels:
         tabs.append({'config': swm.connection.conf.as_dict()})
@@ -77,9 +89,6 @@ class SWMGuiElements(SWM):
 
         # the GUI where you can call handle_cmd_from_wheel, once initialized
         self.wheel_gui = None  
-
-        # store the gui update thread: essentially only updates incoming messages in the text box
-        # self.gui_update_thread = None  
 
         self.tab_id = None  # the attached GUI tab
 
@@ -269,6 +278,17 @@ class Interface():
                     smart_wheel.wheel_gui.update_status_from_wheel()
 
                 self.update_gui_from_wheel(smart_wheel)
+
+                # # empty the smart wheel incoming and show on screen if wanted
+                try_again = True
+                while try_again:
+                    try:
+                        msg = smart_wheel.incoming.pop(0)
+                        if msg[0] in SHOW_MESSAGES:
+                            self._message(smart_wheel, ','.join(msg))
+                    except IndexError:
+                        # empty
+                        try_again = False
               
         # messages
         try:
@@ -537,7 +557,7 @@ class Interface():
         logger.info('Add new wheel')
 
         conn = connection.Connection()
-        new_sm = SWMGuiElements(connection=conn)
+        new_sm = SWMGuiElements(connection=conn, populate_incoming=POPULATE_INCOMING)
 
         all_tabs = self.note.tabs()
         if len(all_tabs) == 0:
@@ -703,20 +723,6 @@ class Interface():
                     self.message(smart_wheel, '-> [%s]' % sent.strip())
                 else:
                     self.message(smart_wheel, 'ignored, already disabled')
-            # elif action == 'enable-disable':
-            #     sent = None
-            #     if 'selected' in self.gui_elements[smart_wheel.name]['enable_checkbutton'].state():
-            #         if not smart_wheel.enabled:
-            #             sent = smart_wheel.enable()
-            #         else:
-            #             self.message(smart_wheel, 'ignored: smart wheel already enabled')
-            #     else:
-            #         if smart_wheel.enabled:
-            #             sent = smart_wheel.disable()
-            #         else:
-            #             self.message(smart_wheel, 'ignored: smart wheel already disabled')
-            #     if sent:
-            #         self.message(smart_wheel, '-> [%s]' % sent.strip())
 
         except NotConnectedException as err:
             self.message(smart_wheel, 'Oops, there was an error: {}'.format(err))
@@ -845,7 +851,7 @@ def main():
             logger.info("Starting with default settings [%s]..." % ', '.join(config_filenames))
         for filename in config_filenames:
             conn = connection.Connection.from_file(filename)
-            new_sm = SWMGuiElements(connection=conn)
+            new_sm = SWMGuiElements(connection=conn, populate_incoming=POPULATE_INCOMING)
             smart_modules.append(new_sm)
             # If anything is wrong, it should have crashed
 

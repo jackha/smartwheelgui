@@ -48,16 +48,19 @@ class SWM(object):
     CMD_LOAD_FROM_CONTROLLER = '$97'
     CMD_STORE_IN_CONTROLLER = '$98'
 
+    # (command, only first time)
     POLL_COMMANDS = [
-        ('$10', False),  # actual values
-        ('$11', False),
-        ('$13', False),
-        ('$15', False),
-        ('$29', True),
-        ('$50', False),
-        ('$58', False),
-        ('$59', False),
-        ('$60', True),    
+        ('$60', True),  # get adc labels
+        ('$29', True),  # get afirmware
+        ('$9', True),   # reset min max values adc
+        ('$50', True), # get PID parameters
+
+        ('$10', False),  # get voltages
+        ('$11', False),  # get status and errors
+        ('$13', False),  # get actual speed and direction
+        #('$15', False),
+        ('$58', False),  # get process times
+        ('$59', False),  # get counters
     ]
 
     SEPARATOR = '|'    
@@ -65,7 +68,7 @@ class SWM(object):
     STATE_CONNECTED = 'connected'
     STATE_NOT_CONNECTED = 'not-connected'
 
-    def __init__(self, connection, update_period=.2, populate_incoming=False):
+    def __init__(self, connection, update_period=.1, populate_incoming=False):
         """
         connection object
         update_period in seconds: poll info approximately at this rate
@@ -106,6 +109,7 @@ class SWM(object):
 
         # determines if self.incoming is being populated as messages come in.
         self.populate_incoming = populate_incoming  
+        logger.info("pop incoming %s" % self.populate_incoming)
 
         # report subscription: who wants to know my (debug) info??
         self.report_to = []
