@@ -489,7 +489,7 @@ class Interface():
         button.grid(row=row, column=4)
         
         speed_scale = ttk.Scale(label_frame_wheel, 
-            from_=200, to=-200, 
+            from_=-200, to=200, 
             orient=tk.VERTICAL,
             command=self.set_speed_fun(smart_wheel))
         speed_scale.grid(row=row, column=5)
