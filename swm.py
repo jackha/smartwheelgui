@@ -163,6 +163,10 @@ class SWM(object):
                                 self.cmd_from_wheel[cleaned_item_split[0]] = cleaned_item_split
                                 self.cmd_counters[cleaned_item_split[0]] += 1
                                 self.total_reads += 1
+                                if cleaned_item_split[0] == '$1':
+                                    self.enabled = True
+                                elif cleaned_item_split[0] == '$0':
+                                    self.enabled = False
             except:
                 if self.connection.connection is None:
                     continue
@@ -243,14 +247,14 @@ class SWM(object):
 
     @connected_fun
     def enable(self):
-        self.enabled = True
+        # self.enabled = True
         self.write_queue.append(self.CMD_ENABLE)
         self.message("enable")
         return self.CMD_ENABLE
 
     @connected_fun
     def disable(self):
-        self.enabled = False
+        # self.enabled = False
         self.write_queue.append(self.CMD_DISABLE)
         self.message("disable")
         return self.CMD_DISABLE

@@ -205,6 +205,7 @@ class Interface():
 
     GUI_FIRMWARE = 'firmware'
 
+    GUI_WHEEL_ENABLED = 'wheel_enabled'
     GUI_VIN = 'vin'
     GUI_COUNTERS = 'counters'
 
@@ -289,7 +290,10 @@ class Interface():
                     except IndexError:
                         # empty
                         try_again = False
-              
+
+                # update all enabled / disabled buttons
+                self.update_gui_elements(smart_wheel)
+                      
         # messages
         try:
             target, msg = self.gui_message_queue.pop(0)
@@ -369,15 +373,6 @@ class Interface():
 
         label_frame_row += 1
         ttk.Label(
-            label_frame_connection, text='status', foreground=GREY).grid(
-            row=label_frame_row, column=0, sticky=tk.E)
-        label = smart_wheel.create_label(
-            label_frame_connection, self.GUI_CONNECTION_STATUS, 
-            '')  # fill initially with empty
-        label.grid(row=label_frame_row, column=1, columnspan=10, sticky=tk.W)
-
-        label_frame_row += 1
-        ttk.Label(
             label_frame_connection, text='config', foreground=GREY).grid(
             row=label_frame_row, column=0, sticky=tk.E)
         label2 = smart_wheel.create_label(
@@ -391,6 +386,24 @@ class Interface():
             row=label_frame_row, column=0, sticky=tk.E)
         label = smart_wheel.create_label(
             label_frame_connection, self.GUI_FIRMWARE, 
+            '')  # fill initially with empty
+        label.grid(row=label_frame_row, column=1, columnspan=10, sticky=tk.W)
+
+        label_frame_row += 1
+        ttk.Label(
+            label_frame_connection, text='status', foreground=GREY).grid(
+            row=label_frame_row, column=0, sticky=tk.E)
+        label = smart_wheel.create_label(
+            label_frame_connection, self.GUI_CONNECTION_STATUS, 
+            '')  # fill initially with empty
+        label.grid(row=label_frame_row, column=1, columnspan=10, sticky=tk.W)
+
+        label_frame_row += 1
+        ttk.Label(
+            label_frame_connection, text='wheel enabled', foreground=GREY).grid(
+            row=label_frame_row, column=0, sticky=tk.E)
+        label = smart_wheel.create_label(
+            label_frame_connection, self.GUI_WHEEL_ENABLED, 
             '')  # fill initially with empty
         label.grid(row=label_frame_row, column=1, columnspan=10, sticky=tk.W)
 
@@ -540,7 +553,7 @@ class Interface():
 
         # subscribe myself for back logging
         smart_wheel.subscribe(self.message)
-        self.update_gui_elements(smart_wheel)
+        # self.update_gui_elements(smart_wheel)
 
         # TODO: how to better get tab_id?
         if position == 'end':
@@ -660,8 +673,16 @@ class Interface():
             smart_wheel.get_elem(self.GUI_DISCONNECT_BUTTON)['state'] = tk.ACTIVE
             smart_wheel.get_elem(self.GUI_RESET_BUTTON)['state'] = tk.ACTIVE
 
-            smart_wheel.get_elem(self.GUI_ENABLE_BUTTON)['state'] = tk.ACTIVE
-            smart_wheel.get_elem(self.GUI_DISABLE_BUTTON)['state'] = tk.ACTIVE
+            #smart_wheel.get_elem(self.GUI_ENABLE_BUTTON)['state'] = tk.ACTIVE
+            #smart_wheel.get_elem(self.GUI_DISABLE_BUTTON)['state'] = tk.ACTIVE
+
+            if smart_wheel.enabled:
+                smart_wheel.get_elem(self.GUI_ENABLE_BUTTON)['state'] = tk.DISABLED
+                smart_wheel.get_elem(self.GUI_DISABLE_BUTTON)['state'] = tk.ACTIVE
+            else:
+                smart_wheel.get_elem(self.GUI_ENABLE_BUTTON)['state'] = tk.ACTIVE
+                smart_wheel.get_elem(self.GUI_DISABLE_BUTTON)['state'] = tk.DISABLED
+
             smart_wheel.get_elem(self.GUI_EDIT_BUTTON)['state'] = tk.ACTIVE
         elif smart_wheel.state == smart_wheel.STATE_NOT_CONNECTED:
             smart_wheel.get_elem(self.GUI_CONNECT_BUTTON)['state'] = tk.ACTIVE
@@ -728,7 +749,7 @@ class Interface():
             self.message(smart_wheel, 'Oops, there was an error: {}'.format(err))
 
         smart_wheel.update_state()
-        self.update_gui_elements(smart_wheel)
+        # self.update_gui_elements(smart_wheel)
 
     def set_config(self, smart_wheel, config):
         logger.info("New smart wheel [%s] has new config [%s]" % (smart_wheel, config))
@@ -765,6 +786,17 @@ class Interface():
                 smart_wheel.set_color(self.GUI_VIN, 'red')
             else:
                 smart_wheel.set_color(self.GUI_VIN, 'black')
+        if smart_wheel.enabled:
+            smart_wheel.set_label(self.GUI_WHEEL_ENABLED, 'true')
+            smart_wheel.set_color(self.GUI_WHEEL_ENABLED, 'darkgreen')
+        else:
+            smart_wheel.set_label(self.GUI_WHEEL_ENABLED, 'false')
+            smart_wheel.set_color(self.GUI_WHEEL_ENABLED, 'grey')
+
+        if smart_wheel.is_connected():
+            smart_wheel.set_color(self.GUI_CONNECTION_STATUS, 'darkgreen')
+        else:
+            smart_wheel.set_color(self.GUI_CONNECTION_STATUS, 'grey')
 
         # textual status
         smart_wheel.set_label(
