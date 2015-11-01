@@ -902,9 +902,10 @@ def main():
     
     if not smart_wheels_loaded:
         if not config_filenames:  # if they didn't come from cmdline
-            config_filenames = ['propeller.json', 'testconf1.json', 'ethernet_config.json', ]
+            config_filenames = ['default_propeller.json', 'default_mock.json', 'default_ethernet.json', ]
             logger.info("Starting with default settings [%s]..." % ', '.join(config_filenames))
         for filename in config_filenames:
+            logger.info('Reading config file [%s]...' % filename)
             conn = connection.Connection.from_file(filename)
             new_sm = SWMGuiElements(connection=conn, populate_incoming=POPULATE_INCOMING)
             smart_modules.append(new_sm)

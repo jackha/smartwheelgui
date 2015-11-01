@@ -152,6 +152,8 @@ class ConnectionConfig(object):
         self.ip_address = None
         self.ethernet_port = None
         self.connection_type = self.CONNECTION_TYPE_SERIAL
+        # integer id for externals to communicate with modules
+        self.unique_address = 0  
 
     def as_dict(self):
         """representation of self as a dict for serialization purposes"""
@@ -162,17 +164,20 @@ class ConnectionConfig(object):
                 'comport': self.comport, 'baudrate': self.baudrate, 
                 'timeout': self.timeout,
                 'name': name,  
-                'connection_type': self.connection_type}
+                'connection_type': self.connection_type,
+                'unique_address': self.unique_address}
         elif self.connection_type == self.CONNECTION_TYPE_ETHERNET:
             result = {
                 'name': name,  
                 'connection_type': self.connection_type,
                 'ip_address': self.ip_address,
-                'ethernet_port': self.ethernet_port}
+                'ethernet_port': self.ethernet_port,
+                'unique_address': self.unique_address}
         elif self.connection_type == self.CONNECTION_TYPE_MOCK:
             result = {
                 'name': name,  
-                'connection_type': self.connection_type}
+                'connection_type': self.connection_type,
+                'unique_address': self.unique_address}
         return result
 
     def save(self, filename):
@@ -214,11 +219,13 @@ class ConnectionConfig(object):
             self.set_var('comport', cfg['comport'])
             self.set_var('baudrate', int(cfg['baudrate']))
             self.set_var('timeout', int(cfg['timeout']))
+            self.set_var('unique_address', int(cfg['unique_address']))
         elif self.connection_type == self.CONNECTION_TYPE_ETHERNET:
             self.set_var('ip_address', cfg['ip_address'])
             self.set_var('ethernet_port', int(cfg['ethernet_port']))
+            self.set_var('unique_address', int(cfg['unique_address']))
         elif self.connection_type == self.CONNECTION_TYPE_MOCK:
-            pass
+            self.set_var('unique_address', int(cfg['unique_address']))
 
     def set_var(self, var_name, var_value):
         """Use set_var for setting class variables, it provides extra error 
@@ -238,18 +245,21 @@ class ConnectionConfig(object):
             self.ip_address = var_value
         elif var_name == 'ethernet_port':
             self.ethernet_port = var_value
+        elif var_name == 'unique_address':
+            self.unique_address = var_value
         else:
             logger.error("Tried to set unknown variable: %s" % var_name)
 
     def __str__(self):
         if self.connection_type == self.CONNECTION_TYPE_SERIAL:
-            return "ConnectionConfig [%s]: serial port=%s, baudrate=%s, timeout=%s" % (
-                self.name, self.comport, self.baudrate, self.timeout)
+            return "ConnectionConfig [%s]: id=%s serial port=%s, baudrate=%s, timeout=%s" % (
+                self.name, self.unique_address, self.comport, self.baudrate, self.timeout)
         elif self.connection_type == self.CONNECTION_TYPE_MOCK:
-            return "ConnectionConfig [%s]: mock timeout=%s" % (self.name, self.timeout)
+            return "ConnectionConfig [%s]: id=%s mock timeout=%s" % (
+                self.name, self.unique_address, self.timeout)
         elif self.connection_type == self.CONNECTION_TYPE_ETHERNET:
-            return "ConnectionConfig [%s]: ethernet ip=%s port=%s" % (
-                self.name, self.ip_address, self.ethernet_port)
+            return "ConnectionConfig [%s]: id=%s ethernet ip=%s port=%s" % (
+                self.name, self.unique_address, self.ip_address, self.ethernet_port)
 
 
 class Connection(object):

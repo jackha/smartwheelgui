@@ -117,13 +117,24 @@ class ConfigGUI(object):
         self.note_idx[connection.ConnectionConfig.CONNECTION_TYPE_MOCK] = note_idx_counter
 
         # lower part
-        row = 1
-        ttk.Label(mainframe, text="connection name").grid(row=row, column=0)
+        row += 1
+        ttk.Label(mainframe, text="unique address").grid(
+            row=row, column=0, columnspan=2, sticky=tk.E)
+        self.unique_address_var = tk.StringVar()
+        self.unique_address_var.set("0")
+
+        self.unique_address = ttk.Entry(mainframe, textvariable=self.unique_address_var)
+        self.unique_address.grid(row=row, column=2, columnspan=3, sticky=tk.W)
+
+        # connection name
+        row += 1
+        ttk.Label(mainframe, text="connection name").grid(
+            row=row, column=0, columnspan=2, sticky=tk.E)
         self.name_var = tk.StringVar()
         self.name_var.set("connection name")
 
         self.name = ttk.Entry(mainframe, textvariable=self.name_var)
-        self.name.grid(row=row, column=1)
+        self.name.grid(row=row, column=2, columnspan=3, sticky=tk.W)
 
         # row = 1
         # ttk.Label(mainframe, text="filename").grid(row=row, column=0)
@@ -160,11 +171,13 @@ class ConfigGUI(object):
         if config.connection_type == connection.ConnectionConfig.CONNECTION_TYPE_SERIAL:
             self.baud.set(config.baudrate)
             self.ports.set(config.comport)
+            self.unique_address_var.set(config.unique_address)
         elif config.connection_type == connection.ConnectionConfig.CONNECTION_TYPE_ETHERNET:
             self.ip_address_var.set(config.ip_address)
             self.ethernet_port_var.set(config.ethernet_port)
+            self.unique_address_var.set(config.unique_address)
         elif config.connection_type == connection.ConnectionConfig.CONNECTION_TYPE_MOCK:
-            pass
+            self.unique_address_var.set(config.unique_address)
 
     def config_from_state(self):
         """Return config object from current window state"""
@@ -177,11 +190,13 @@ class ConfigGUI(object):
         if connection_type == connection.ConnectionConfig.CONNECTION_TYPE_SERIAL:
             config.set_var('comport', self.ports.get())
             config.set_var('baudrate', self.baud.get())
+            config.set_var('unique_address', self.unique_address.get())
         elif connection_type == connection.ConnectionConfig.CONNECTION_TYPE_ETHERNET:
             config.set_var('ip_address', self.ip_address.get())
             config.set_var('ethernet_port', self.ethernet_port.get())
+            config.set_var('unique_address', self.unique_address.get())
         elif connection_type == connection.ConnectionConfig.CONNECTION_TYPE_MOCK:
-            pass
+            config.set_var('unique_address', self.unique_address.get())
         return config
 
     def revert(self):
