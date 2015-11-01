@@ -1,5 +1,21 @@
 #!/usr/bin/python
 # -*- coding: utf-8 -*-
+"""
+manage connections and connection configurations.
+
+ConnectionConfig: merely a set of variables that represent a connection
+Connection: using ConnectionConfig, set up and manage the connection.
+
+Currently 3 connection types are recognized:
+- serial: standard propeller connection
+- mock: testing responses in this software
+- ethernet (experimental using server.py)
+
+also some wrappers to implement a single interface:
+- SocketWrapper implements socket with those functions
+- SerialWrapper wraps serial, includes encoding and decoding of data into/from
+  utf-8.
+"""
 import logging
 import json
 import serial
@@ -23,7 +39,9 @@ class NotConnectedException(Exception):
 
 
 class SocketWrapper(socket.socket):
-    """All the functions readline and write"""
+    """
+    All the functions readline and write
+    """
     CR = '\r\n'
 
     def __init__(self, *args, **kwargs):
