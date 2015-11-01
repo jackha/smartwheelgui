@@ -4,6 +4,8 @@ A mock SWM serial object, for testing.
 import time
 import logging
 import random
+import threading
+import math
 from time import sleep
 
 logger = logging.getLogger(__name__)
@@ -23,8 +25,9 @@ class MockSerial(object):
     Any write instruction immediately outputs a response in self.outgoing, 
     available for the read function to return. Commands: see _process_incoming.
 
-    After every write instruction the mock adc variables are updated with
-    some random numbers.
+    update_thread: 
+    - Mock adc variables are updated with some random number 
+    - Steer and speed are updated using setpoint.
     """
     def __init__(self, timeout=1, **kwargs):
         """
@@ -75,6 +78,11 @@ class MockSerial(object):
             self.pid_eeprom[i] = i
         
         self.last_error = ''
+
+        self.i_wanna_live = True
+
+        self._update_thread = threading.Thread(target=self.update_thread)
+        self._update_thread.start()
 
     def reset_adc_min_max(self):
         """
@@ -148,8 +156,8 @@ class MockSerial(object):
             elif command[0] == '$1':
                 response = ['$1']
             elif command[0] == '$2':
-                self.setpoint_speed = max(min(int(command[1]), -200), 200)
-                self.setpoint_dir = max(min(int(command[2]), -1800), 1800)
+                self.setpoint_speed = min(max(int(command[1]), -200), 200)
+                self.setpoint_dir = min(max(int(command[2]), -1800), 1800)
                 logging.debug("$2: speed=%d, dir=%d" % self.setpoint_speed, self.setpoint_dir)
                 response = ['$2']
             elif command[0] == '$8':
@@ -167,10 +175,11 @@ class MockSerial(object):
                 response = ['$11', str(random.randint(0,65535)), str(random.randint(0,65535))]
             elif command[0] == '$13':
                 response = ['$13', 
+                    str(self.actual_wheel_pos),
+                    str(self.actual_wheel_speed),
                     str(self.actual_steer_pos),
                     str(self.actual_steer_speed),
-                    str(self.actual_wheel_pos),
-                    str(self.actual_wheel_speed),]
+                    ]
             elif command[0] == '$15':
                 response = ['$15', str(int(command[1]) + 1)]
             elif command[0] == '$16':
@@ -220,8 +229,37 @@ class MockSerial(object):
             else:
                 logging.debug("warning: no response generated from command [%s]" % command_line)
 
-        sleep(0.001)
-        self.update_random_adc()
+    def update_thread(self):
+        """
+        thread function to update internal variables
+
+        not quite thread safe but ah well.
+        """
+        while self.i_wanna_live:
+            # p controller
+            new_speed = (self.setpoint_speed - self.actual_wheel_pos) / 10.0
+            if new_speed > 0:
+                self.actual_wheel_speed = int(math.ceil(new_speed))
+            else:
+                self.actual_wheel_speed = int(math.floor(new_speed))
+
+            self.actual_wheel_pos += self.actual_wheel_speed
+            # logger.info("set point: %s actual: %s" % (self.setpoint_speed, self.actual_wheel_pos))
+
+            new_steer = (self.setpoint_dir - self.actual_steer_pos) / 10.0
+            if new_steer > 0:
+                self.actual_steer_speed = int(math.ceil(new_steer))
+            else:
+                self.actual_steer_speed = int(math.floor(new_steer))
+
+            self.actual_steer_pos += self.actual_steer_speed
+            
+            self.update_random_adc()
+            sleep(0.05)
         
     def disconnect(self):
+        """
+        Fake disconnect.
+        """
         logging.debug('Close mock')
+        self.i_wanna_live = False

@@ -62,7 +62,7 @@ LOG_PATH = './logs'
 POPULATE_INCOMING = True
 
 # these are the messages actually shown in the gui.
-SHOW_MESSAGES = {'$0', '$1', '$8', '$9', '$15', '$29', '$50', '$60', '$13'}
+SHOW_MESSAGES = {'$0', '$1', '$8', '$9', '$15', '$29', '$50', '$60'}
 
 
 def smart_wheels_from_state_file(filename):
@@ -894,8 +894,8 @@ class Interface():
         if SWM.CMD_ACT_SPEED_DIRECTION in cmds:
             cmd = cmds[SWM.CMD_ACT_SPEED_DIRECTION]
             # $13, actual wheel position, actual wheel speed, actual steer position, actual steer<CR>
-            smart_wheel.set_label(self.GUI_SPEED_ACTUAL, str(cmd[2]))
-            smart_wheel.set_label(self.GUI_STEER_ACTUAL, str(cmd[4]))
+            smart_wheel.set_label(self.GUI_SPEED_ACTUAL, str(cmd[1]))
+            smart_wheel.set_label(self.GUI_STEER_ACTUAL, str(cmd[3]))
         if SWM.CMD_GET_FIRMWARE in cmds:
             cmd = cmds[SWM.CMD_GET_FIRMWARE]
             smart_wheel.set_label(self.GUI_FIRMWARE, ' '.join(cmd[1:]))
