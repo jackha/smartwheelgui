@@ -18,7 +18,7 @@ class WheelLogHandler(logging.Handler):
         """
         try:
             msg = self.format(record)
-            if record.levelno <= self.level:
+            if record.levelno >= self.level:
                 filename = '%s.log' % record.__dict__.get('wheel_slug', 'main')
                 with open(os.path.join(self.logpath, filename), 'a') as f:
                     f.write(msg + '\n')

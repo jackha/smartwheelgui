@@ -858,10 +858,10 @@ class Interface():
 def main():
     #logging.basicConfig(level=logging.DEBUG)  # no file, only console
     # pre logging: delete main.log, if exists
-    filename = os.path.join(LOG_PATH, 'main.log')
-    if os.path.exists(filename):
-        print("Delete existing logfile at [%s]" % filename)
-        os.remove(filename)
+    # filename = os.path.join(LOG_PATH, 'main.log')
+    # if os.path.exists(filename):
+    #     print("Delete existing logfile at [%s]" % filename)
+    #     os.remove(filename)
 
     # set up logging
     setup_logging(
@@ -911,12 +911,14 @@ def main():
             smart_modules.append(new_sm)
             # If anything is wrong, it should have crashed
 
-    # delete log files
+    # log files
     for sm in smart_modules:
         filename = os.path.join(LOG_PATH, '%s.log' % sm.extra['wheel_slug'])
-        if os.path.exists(filename):
-            logger.info("Delete existing logfile at [%s]" % filename)
-            os.remove(filename)
+        logger.info("Look for logfile at [%s]" % filename)
+        # os.remove(filename)
+        # if os.path.exists(filename):
+            # logger.info("Delete existing logfile at [%s]" % filename)
+            # os.remove(filename)
 
     interface = Interface(root, smart_modules)
 

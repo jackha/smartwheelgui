@@ -82,6 +82,11 @@ class SWM(object):
         self.name = self.connection.conf.name
         self.slug = slugify(self.name)
 
+        # for logging
+        self.extra = self._extra()
+        logger.info(70*"*", extra=self.extra)
+        logger.info("Starting SWM...", extra=self.extra)
+        logger.info("Connection info: %s" % str(connection))
         # self.connected = False
 
         # add actions to the write queue and the write thread will consume them
@@ -109,7 +114,7 @@ class SWM(object):
 
         # determines if self.incoming is being populated as messages come in.
         self.populate_incoming = populate_incoming  
-        logger.info("pop incoming %s" % self.populate_incoming)
+        logger.info("pop incoming %s" % self.populate_incoming, extra=self.extra)
 
         # report subscription: who wants to know my (debug) info??
         self.report_to = []
@@ -125,9 +130,6 @@ class SWM(object):
         # used to check alivenes of threads
         self.read_counter = 0
         self.write_counter = 0
-
-        # for logging
-        self.extra = self._extra()
 
     @classmethod
     def from_config(
@@ -292,5 +294,6 @@ class SWM(object):
             self.state = self.STATE_NOT_CONNECTED
 
     def _extra(self):
-        """return dict which can be used in logger.info(msg, extra=...)"""
+        """return dict which can be used in logger.info(msg, extra=...)
+        """
         return dict(wheel_name=self.name, wheel_slug=self.slug)
