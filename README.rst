@@ -60,9 +60,19 @@ Start the gui::
 You should see the main wheel control screen (using default settings). You can 
 manage them using the Config button and the File menu.
 
-When the program is closed, the state is saved in _guistate.json. If 
-_guistate.json is deleted, the next time the GUI is started with the default
-settings.
+The GUI program provides the basics of controlling and reading Smart Wheel 
+Modules (SWM). The GUI is constantly updated with the latest state.
 
-Logfiles are created for every wheel module in the logs subfolder.
+Manage SWMs:
+- Add, set up and remove SWMs.
+- Logging to each separate SWM in logs.
+- When the program is closed, the GUI state is saved to _guistate.json
+- If the _guistate.json is deleted, the next time the GUI is started with
+  default settings.
 
+Each separate SWM:
+- Connection configuration (config.py)
+- Connect / disconnect / reset
+- Enable / disable / steer / speed the SWM
+- Edit / inspect the SWM (wheel_gui.py)
+- Low level commands to SWM.

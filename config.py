@@ -148,7 +148,7 @@ class ConfigGUI(object):
         ttk.Button(mainframe, text="Revert", command=self.revert).grid(row=row, column=0, sticky=tk.E)
         ttk.Button(mainframe, text="Load from file...", command=self.load).grid(row=row, column=1, sticky=tk.E)
         ttk.Button(mainframe, text="Save to file...", command=self.save).grid(row=row, column=2, sticky=tk.E)
-        ttk.Button(mainframe, text="OK", command=self.close).grid(row=row, column=3, sticky=tk.E)
+        ttk.Button(mainframe, text="OK", command=self.ok).grid(row=row, column=3, sticky=tk.E)
         ttk.Button(mainframe, text="Cancel", command=self.cancel).grid(row=row, column=4, sticky=tk.E)
 
         #for child in mainframe.winfo_children(): 
@@ -245,7 +245,10 @@ class ConfigGUI(object):
 
         self.state_from_config(config)
 
-    def close(self):
+    def ok(self):
+        """
+        OK and close - call set_config on parent.
+        """
         if self.parent is not None and self.smart_wheel is not None:
             # callback in parent window
             self.parent.set_config(self.smart_wheel, self.config_from_state())  # we want to remember it

@@ -1,5 +1,22 @@
 #!/usr/bin/python
 # -*- coding: utf-8 -*-
+"""
+Author: Jack Ha
+License: lgpl
+
+Smart Wheel Module (SWM) main GUI program.
+
+Usage: see README.rst
+
+if GUI_STATE_FILENAME exists, it will try to load the gui state from the file.
+if it fails, you can always delete this file and a new file will be generated.
+
+The Interface class is instantiated with notes (tabs) created for each SWM.
+
+SWMGuiElements is an extension on the SWM class, it provides GUI helper 
+functions.
+
+"""
 
 try:
     # python3: default
@@ -76,9 +93,15 @@ def state_file_from_smart_wheels(smart_wheels):
 class SWMGuiElements(SWM):
     """
     Smart Wheel Module with Interface elements (with corresponding values).
+
+    With tk, we need StringVar objects to actually store, recall and set field
+    values.
     """
 
     def __init__(self, *args, **kwargs):
+        """
+        Set defaults
+        """
         super(SWMGuiElements, self).__init__(*args, **kwargs)
 
         # organize elements by key
@@ -93,9 +116,18 @@ class SWMGuiElements(SWM):
         self.tab_id = None  # the attached GUI tab
 
     def set_elem(self, elem_name, elem_value):
+        """
+        Set a GUI element
+
+        Use this function when using other objects than create_label, 
+        create_button, etc.
+        """
         self.elements[elem_name] = elem_value
 
     def get_elem(self, elem_name):
+        """
+        Return the internally stored GUI element.
+        """
         return self.elements[elem_name]
 
     def create_label(self, frame, elem_name, elem_value, label_args={}):
@@ -154,6 +186,9 @@ class SWMGuiElements(SWM):
         return obj
 
     def create_text(self, frame, elem_name, elem_args={}):
+        """
+        Create tk.Text object and return it. 
+        """
         obj = tk.Text(frame, **elem_args)
         self.elements[elem_name] = obj
         return obj
@@ -168,7 +203,11 @@ class SWMGuiElements(SWM):
             self.elements[elem_var_name].set(elem_value)
 
     def set_color(self, elem_name, color_value):
-        """color_value is something like '#356' """
+        """
+        Set an elements color.
+
+        color_value is something like '#356' 
+        """
         self.elements[elem_name].configure(foreground=color_value)
 
     def get_label(self, elem_name):
@@ -180,6 +219,15 @@ class SWMGuiElements(SWM):
 
 
 class Interface():
+    """
+    Interface for SmartWheels
+
+    makes an interface for a list of SWMGuiElements objects.
+    the result is a bunch of notes (tabs), each representing a SWM.
+
+    self.smart_wheels must correspond to self.note.tabs().
+    new_wheel and delete_wheel ensure this as well.
+    """
     #GUI_CONNECT_BTN = 'connect_button'
     #GUI_DISCONNECT_BTN = 'disconnect_button'
 
@@ -217,9 +265,10 @@ class Interface():
     PADDING = '10 2 10 4'
 
     def __init__(self, root, smart_wheels):
-        """Interface for SmartWheels, 
+        """
+        Init 
 
-        makes an interface for a list of SWMGuiElements objects.
+        Set defaults and create GUIs for each SWM provided.
         """
         # super(Interface, self).__init__(root)
         self.i_wanna_live = True
@@ -269,7 +318,14 @@ class Interface():
         """ 
         main thread for updating GUI stuff. 
 
-        all changes must be done here 
+        all GUI changes must be done here.
+
+        - SWM status -> GUI status (with interval UPDATE_TIME_SLOW)
+        - SWM incoming messages -> display on screen with filter SHOW_MESSAGES
+        - Display messages that come from using "def message"
+        - Set labels that come from using "def set_label" 
+          (config change, steer command, etc)
+        - Set tab names (after config change)
         """
     
         check_time = time.time()
@@ -325,12 +381,12 @@ class Interface():
         """
         Create a GUI for given smart wheel and put it in self.note.
 
-        The smart_wheel is subscribed to message 
+        The smart_wheel is subscribed to the function message 
         (means that some output will be seen in the message box)
 
         Afterwards the GUI is updated with the smart wheel state.
 
-        Position is ttk.Notebooks index: either an integer or "end"
+        kwarg Position is ttk.Notebooks index: either an integer or "end"
         """
         new_tab = ttk.Frame(self.note)
             
@@ -541,7 +597,7 @@ class Interface():
         input_field.grid(row=row, column=0, columnspan=4, sticky=tk.NSEW)
 
         # <return> executes the command
-        input_field.bind('<Return>', self.event_fun(smart_wheel, new_tab))
+        input_field.bind('<Return>', self.event_fun(smart_wheel))
 
         # output label
         row += 1
@@ -582,7 +638,9 @@ class Interface():
 
     def new_wheel(self):
         """
-        Add new wheel
+        Add new wheel.
+
+        self.smart_wheels, self.note are both updated
         """
         logger.info('Add new wheel')
 
@@ -608,6 +666,12 @@ class Interface():
             connection_config=new_sm.connection.conf)
 
     def delete_wheel(self):
+        """
+        Delete wheel module from tabs
+
+        Both self.smart_wheels as wel as self.note are updated.
+        The SWM is first shut down before deleted.
+        """
         selected_tab = self.note.select()
         idx = self.note.index(selected_tab)
         logger.info("Delete wheel from gui: %s, idx=%d" % (self.note.tab(selected_tab, "text"), idx))
@@ -616,11 +680,16 @@ class Interface():
         self.note.forget(selected_tab)
 
     def on_resize(self, event):
+        """
+        Resize event
+
+        Testing
+        """
         logger.info('Resizing...')
 
     def quit(self):
         """
-        Quit
+        Quit the GUI
         """
         logger.info('Quit')
         self.i_wanna_live = False
@@ -634,9 +703,19 @@ class Interface():
         logger.info('GUI state saved.')
 
     def set_label(self, smart_wheel, label_name, text):
+        """
+        Set GUI label.
+
+        Call this function from anywhere to set GUI labels, it is thread safe.
+        """
         self.gui_set_label_queue.append((smart_wheel, label_name, text))
 
     def set_steer(self, smart_wheel, new_steer):
+        """
+        Set steer
+
+        Read the steer scale, update the GUI and send the command to the SWM.
+        """
         logger.info('Steer: %s, %s' % (smart_wheel, new_steer))
         self.steer_set_point = new_steer
         # smart_wheel.set_label(self.GUI_STEER_SET_POINT, str(self.steer_set_point))
@@ -646,11 +725,19 @@ class Interface():
         smart_wheel.command(cmd)
 
     def set_steer_fun(self, smart_wheel):
+        """
+        Wrapper for set_steer to eliminate the smart_wheel option.
+        """
         def fun(new_steer):
             return self.set_steer(smart_wheel, int(float(new_steer)))
         return fun
 
     def set_speed(self, smart_wheel, new_speed):
+        """
+        Set speed
+
+        Read the speed scale, update the GUI and send the command to the SWM.
+        """
         logger.info('Speed: %s, %s' % (smart_wheel, new_speed))
         self.speed_set_point = new_speed
         self.set_label(smart_wheel, self.GUI_SPEED_SET_POINT, str(self.speed_set_point))
@@ -659,11 +746,20 @@ class Interface():
         smart_wheel.command(cmd)
 
     def set_speed_fun(self, smart_wheel):
+        """
+        Wrapper for set_speed to eliminate the smart_wheel option.
+        """
         def fun(new_speed):
             return self.set_speed(smart_wheel, int(float(new_speed)))
         return fun
 
-    def handle_command(self, smart_wheel, tab, event):
+    def handle_command(self, smart_wheel, event):
+        """
+        Handle command
+
+        Read GUI element and send the command to SWM.
+        Does nothing with given event (yet).
+        """
         command = smart_wheel.get_elem(self.GUI_INPUT_FIELD).get()
         logger.debug("Handle: %s" % command)
         try:
@@ -673,17 +769,17 @@ class Interface():
             logger.exception("You're not connected yet.")
             self.message(smart_wheel, 'ERROR, you are not connected.')
 
-    def event_fun(self, smart_wheel, tab):
+    def event_fun(self, smart_wheel):
         """
-        return a button function without parameters with these parameters included 
+        Return handle_command function with only the event as parameter.
         """
         def new_fun(event):
-            return self.handle_command(smart_wheel, tab, event)
+            return self.handle_command(smart_wheel, event)
         return new_fun
 
     def update_gui_elements(self, smart_wheel):
         """
-        Use smart_wheel.status to set the GUI status.
+        Use smart_wheel.state and smart_wheel.enabled to set the GUI status.
         """
         if smart_wheel.state == smart_wheel.STATE_CONNECTED:
             smart_wheel.get_elem(self.GUI_CONNECT_BUTTON)['state'] = tk.DISABLED
@@ -711,7 +807,11 @@ class Interface():
             smart_wheel.get_elem(self.GUI_EDIT_BUTTON)['state'] = tk.DISABLED
 
     def button(self, smart_wheel, tab, action):
-        """Do the appropriate action for the current SmartWheel"""
+        """
+        Handle button press
+
+        Do the appropriate action for the current SmartWheel
+        """
         logger.info("button: %s for SmartWheel[%s]" % (action, str(smart_wheel)))
         try:
             if action == 'reset':
@@ -775,6 +875,11 @@ class Interface():
         # self.update_gui_elements(smart_wheel)
 
     def set_config(self, smart_wheel, config):
+        """
+        Set the SWM using the provided config.
+
+        This function is called from the config screen after pressing save or ok.
+        """
         logger.info("New smart wheel [%s] has new config [%s]" % (smart_wheel, config))
         smart_wheel.connection.conf = config
         self.gui_set_label_queue.append((smart_wheel, self.GUI_CONNECTION_NAME, config.name))
@@ -783,13 +888,7 @@ class Interface():
 
     def update_gui_from_wheel(self, smart_wheel):
         """
-        cmd is a message as received with smart_wheel.incoming.pop(0)
-
-        call only from main thread! there are direct GUI edits
-        
-        which is typically a list of strings.
-
-        smart_wheel object is probably a target where you want to set variables
+        Update specific buttons for a SWM. Called from update_me.        
         """
         cmds = smart_wheel.cmd_from_wheel
         if SWM.CMD_ACT_SPEED_DIRECTION in cmds:
@@ -834,7 +933,9 @@ class Interface():
             
     def button_fun(self, smart_wheel, tab, action):
         """
-        return a button function without parameters with these parameters included 
+        Button function wrapper.
+
+        Return the same function, but without the parameters. 
         """
         def new_fun():
             return self.button(smart_wheel, tab, action)
@@ -842,8 +943,10 @@ class Interface():
 
     def message(self, smart_wheel, msg):
         """
-        The message function to be called: add message to queue because this 
-        function may be called from a thread
+        The message function to be called, thread safe.
+
+        Actually adds message to queue because this function can be called from 
+        a thread
         """
         self.gui_message_queue.append((smart_wheel, msg))
 
@@ -856,13 +959,6 @@ class Interface():
 
 
 def main():
-    #logging.basicConfig(level=logging.DEBUG)  # no file, only console
-    # pre logging: delete main.log, if exists
-    # filename = os.path.join(LOG_PATH, 'main.log')
-    # if os.path.exists(filename):
-    #     print("Delete existing logfile at [%s]" % filename)
-    #     os.remove(filename)
-
     # set up logging
     setup_logging(
         LOG_PATH, 
@@ -872,6 +968,11 @@ def main():
         # console_formatter='%(asctime)8s %(levelname)5s - %(message)s'
         )
 
+    logger.info(70*"*")
+    logger.info("*** SWM GUI ".ljust(70, '*'))
+    logger.info(70*"*")
+    logger.info("")
+    
     parser = argparse.ArgumentParser(description='Smart Wheel GUI.')
     parser.add_argument('config_filenames', metavar='config_filenames', type=str, nargs='*',
                        help='config filenames, run "python3 config.py" if you do not have any.')

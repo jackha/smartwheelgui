@@ -25,16 +25,17 @@ def connected_fun(func):
 
 
 def slugify(s):
-    """non foolproof, but easy slugify function"""
+    """
+    non foolproof, but easy slugify function
+    """
     return s.lower().replace(' ', '-')
 
 
 class SWM(object):
     """
-    Smart wheel module: SmartWheel (or other serial object) python binding
+    Smart Wheel Module: SmartWheel python binding
 
-    The class uses threads for read and write separately, and a semaphore to 
-    prevent events to happen simultaneous.
+    The class uses threads for read and write separately.
     """
     CMD_DISABLE = '$0'
     CMD_ENABLE = '$1'
@@ -79,15 +80,16 @@ class SWM(object):
 
         self.counter = 0
         self.enabled = False
-        self.name = self.connection.conf.name
-        self.slug = slugify(self.name)
+
+        #self.name = self.connection.conf.name
+        #self.slug = slugify(self.name)
 
         # for logging
-        self.extra = self._extra()
+        # self.extra = self._extra()
         logger.info(70*"*", extra=self.extra)
-        logger.info("*** New instance of SWM".ljust(70, '*'), extra=self.extra)
-        logger.info(("*** Connection info: %s" % str(connection)).ljust(70, '*'))
+        logger.info("*** New instance of SWM   ".ljust(70, '*'), extra=self.extra)
         logger.info(70*"*", extra=self.extra)
+        logger.info("Connection info: %s" % str(connection))
         # self.connected = False
 
         # add actions to the write queue and the write thread will consume them
@@ -250,14 +252,12 @@ class SWM(object):
 
     @connected_fun
     def enable(self):
-        # self.enabled = True
         self.write_queue.append(self.CMD_ENABLE)
         self.message("enable")
         return self.CMD_ENABLE
 
     @connected_fun
     def disable(self):
-        # self.enabled = False
         self.write_queue.append(self.CMD_DISABLE)
         self.message("disable")
         return self.CMD_DISABLE
@@ -276,7 +276,7 @@ class SWM(object):
         return cmd
 
     def __str__(self):
-        return self.name
+        return '{wheel_name} [{wheel_slug}]'.format(**self.extra)
 
     def shut_down(self):
         self.message("shut down issued")
@@ -294,7 +294,20 @@ class SWM(object):
         else:
             self.state = self.STATE_NOT_CONNECTED
 
-    def _extra(self):
-        """return dict which can be used in logger.info(msg, extra=...)
+    @property
+    def name(self):
         """
-        return dict(wheel_name=self.name, wheel_slug=self.slug)
+        transparently pass connection config name as the smart wheel name
+        """
+        return self.connection.conf.name
+
+    @property
+    def extra(self):
+        """
+        return dict which can be used in logger.info(msg, extra=...)
+
+        compose dict when called: it always uses actual variable values
+        """
+        name = self.name
+        slug = slugify(self.connection.conf.name)
+        return dict(wheel_name=name, wheel_slug=slug)
