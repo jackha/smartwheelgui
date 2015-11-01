@@ -85,8 +85,9 @@ class SWM(object):
         # for logging
         self.extra = self._extra()
         logger.info(70*"*", extra=self.extra)
-        logger.info("Starting SWM...", extra=self.extra)
-        logger.info("Connection info: %s" % str(connection))
+        logger.info("*** New instance of SWM".ljust(70, '*'), extra=self.extra)
+        logger.info(("*** Connection info: %s" % str(connection)).ljust(70, '*'))
+        logger.info(70*"*", extra=self.extra)
         # self.connected = False
 
         # add actions to the write queue and the write thread will consume them
