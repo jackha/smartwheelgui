@@ -48,6 +48,7 @@ class MockSerial(object):
 
         self.actual_wheel_speed = 0
         self.actual_wheel_pos = 0
+        self.enabled = False
 
         self.use_watchdog = False
         self.debug_screen = False
@@ -151,10 +152,12 @@ class MockSerial(object):
             response = None
             command = [c.strip() for c in command_line.split(',')]
 
-            if command[0] == '$0':
+            if command[0] == '$0':  # disable
                 response = ['$0']
-            elif command[0] == '$1':
+                self.enabled = False
+            elif command[0] == '$1':  # enable
                 response = ['$1']
+                self.enabled = True
             elif command[0] == '$2':
                 self.setpoint_speed = min(max(int(command[1]), -200), 200)
                 self.setpoint_dir = min(max(int(command[2]), -1800), 1800)
@@ -236,23 +239,24 @@ class MockSerial(object):
         not quite thread safe but ah well.
         """
         while self.i_wanna_live:
-            # p controller
-            new_speed = (self.setpoint_speed - self.actual_wheel_pos) / 10.0
-            if new_speed > 0:
-                self.actual_wheel_speed = int(math.ceil(new_speed))
-            else:
-                self.actual_wheel_speed = int(math.floor(new_speed))
+            if self.enabled:
+                # p controller
+                new_speed = (self.setpoint_speed - self.actual_wheel_pos) / 10.0
+                if new_speed > 0:
+                    self.actual_wheel_speed = int(math.ceil(new_speed))
+                else:
+                    self.actual_wheel_speed = int(math.floor(new_speed))
 
-            self.actual_wheel_pos += self.actual_wheel_speed
-            # logger.info("set point: %s actual: %s" % (self.setpoint_speed, self.actual_wheel_pos))
+                self.actual_wheel_pos += self.actual_wheel_speed
+                # logger.info("set point: %s actual: %s" % (self.setpoint_speed, self.actual_wheel_pos))
 
-            new_steer = (self.setpoint_dir - self.actual_steer_pos) / 10.0
-            if new_steer > 0:
-                self.actual_steer_speed = int(math.ceil(new_steer))
-            else:
-                self.actual_steer_speed = int(math.floor(new_steer))
+                new_steer = (self.setpoint_dir - self.actual_steer_pos) / 10.0
+                if new_steer > 0:
+                    self.actual_steer_speed = int(math.ceil(new_steer))
+                else:
+                    self.actual_steer_speed = int(math.floor(new_steer))
 
-            self.actual_steer_pos += self.actual_steer_speed
+                self.actual_steer_pos += self.actual_steer_speed
             
             self.update_random_adc()
             sleep(0.05)

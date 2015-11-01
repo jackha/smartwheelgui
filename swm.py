@@ -1,3 +1,8 @@
+"""
+Smart Wheel Module: SmartWheel python binding
+
+The class uses threads for read and write separately.
+"""
 import json
 import threading
 import connection
@@ -36,6 +41,10 @@ class SWM(object):
     Smart Wheel Module: SmartWheel python binding
 
     The class uses threads for read and write separately.
+
+    You can use from_config to instantiate from a config filename.
+
+    POLL_COMMANDS are polled with interval update_period using the write thread.
     """
     CMD_DISABLE = '$0'
     CMD_ENABLE = '$1'
@@ -135,13 +144,20 @@ class SWM(object):
         self.write_counter = 0
 
     @classmethod
-    def from_config(
-        cls, filename):
-
+    def from_config(cls, filename):
+        """
+        Use a config filename to instantiate a SWM.
+        """
         conn = connection.Connection.from_file(filename)
         return cls(conn)
 
     def read_thread(self):
+        """
+        The read thread.
+
+        Read character by character to prevent losing messages and to prevent 
+        any blocking.
+        """
         while self.i_wanna_live:
             try:
                 if self.connection.is_connected():
@@ -178,10 +194,16 @@ class SWM(object):
                 err_msg = self.connection.connection.get_and_erase_last_error()
                 if err_msg:
                     self.message('ERROR in read thread from connection: %s' % err_msg)
+            self.update_state()
             sleep(0.01)  # 10 ms sleep
             self.read_counter += 1
 
     def write_thread(self):
+        """
+        The write thread.
+
+        Write the self.write_queue to a connection, with redundancy.
+        """
         next_poll = time.time()
         while self.i_wanna_live:
             try:
@@ -219,45 +241,63 @@ class SWM(object):
             self.write_counter += 1
 
     def subscribe(self, callback_fun):
-        """Subscribe instance for messages. will be called with (smart_wheel instance, message)"""
+        """
+        Subscribe function for messages. will be called with (smart_wheel instance, message)
+        """
         self.report_to.append(callback_fun)
 
     def connect(self):
+        """
+        Connect the connection object
+        """
         self.message("connect")
         logger.info("going to connect to connection!!", extra=self.extra)
         logger.debug(str(self.connection), extra=self.extra)
-        # self.serial = self.serial_wrapper(
-        #     self.serial_port, self.baudrate, timeout=self.timeout)  # '/dev/ttyS1', 19200, timeout=1
         return self.connection.connect()  # will create connection.connection
 
     def disconnect(self):
+        """
+        Disconnect the connection object, clear memory.
+        """
         self.cmd_from_wheel = {}  # reset all we've got from the wheel
         return self.connection.disconnect()
 
     def is_connected(self):
+        """
+        is_connected
+        """
         return self.connection.is_connected()
 
-    def status(self):
-        # TODO: return status of smartwheel as dict
-        return {'status': 'ok', 'counter': self.counter} 
+    # def status(self):
+    #     # TODO: return status of smartwheel as dict
+    #     return {'status': 'ok', 'counter': self.counter} 
 
-    def do_something(self):
-        self.counter += 1
+    # def do_something(self):
+    #     self.counter += 1
 
     @connected_fun
     def reset(self):
+        """
+        Reset command
+        """
         self.message("reset")
         self.write_queue.append(self.CMD_RESET)
         return self.CMD_RESET
 
     @connected_fun
     def enable(self):
+        """
+        Enable command
+        """
         self.write_queue.append(self.CMD_ENABLE)
         self.message("enable")
         return self.CMD_ENABLE
 
     @connected_fun
     def disable(self):
+        """
+        Disable command
+        """
         self.write_queue.append(self.CMD_DISABLE)
         self.message("disable")
         return self.CMD_DISABLE
@@ -265,6 +305,8 @@ class SWM(object):
     @connected_fun
     def command(self, cmd, once=False):
         """
+        Send command to write_queue
+
         'once' if we need only 1 reply with this command
         """
         self.message("Command: %s" % cmd, logging_only=True)
@@ -279,16 +321,26 @@ class SWM(object):
         return '{wheel_name} [{wheel_slug}]'.format(**self.extra)
 
     def shut_down(self):
+        """
+        shut_down, let threads die
+        """
         self.message("shut down issued")
         self.i_wanna_live = False
 
     def message(self, msg, logging_only=False):
+        """
+        Message using log and optionally the callback function provided using 
+        subscribe.
+        """
         logger.debug("[%s] %s" % (str(self), msg), extra=self.extra)
         if not logging_only:
             for callback_fun in self.report_to:
                 callback_fun(self, "[%s] %s" % (str(self), msg))
 
     def update_state(self):
+        """
+        Update myself, called from read thread
+        """
         if self.connection.is_connected():
             self.state = self.STATE_CONNECTED
         else:

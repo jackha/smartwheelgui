@@ -871,7 +871,7 @@ class Interface():
         except NotConnectedException as err:
             self.message(smart_wheel, 'Oops, there was an error: {}'.format(err))
 
-        smart_wheel.update_state()
+        # smart_wheel.update_state()
         # self.update_gui_elements(smart_wheel)
 
     def set_config(self, smart_wheel, config):
