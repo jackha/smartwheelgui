@@ -195,6 +195,7 @@ class SWM(object):
                 if err_msg:
                     self.message('ERROR in read thread from connection: %s' % err_msg)
             self.update_state()
+
             sleep(0.01)  # 10 ms sleep
             self.read_counter += 1
 
@@ -339,7 +340,8 @@ class SWM(object):
 
     def update_state(self):
         """
-        Update myself, called from read thread
+        Update mu state, called from read thread. If we do it in realtime (lazy 
+        method), we risk writing on a disconnected connection.
         """
         if self.connection.is_connected():
             self.state = self.STATE_CONNECTED
