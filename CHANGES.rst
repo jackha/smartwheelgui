@@ -13,6 +13,8 @@
 
 - Turned vertical slider upside-down.
 
+- Added steer-0 and stop buttons.
+
 
 26/10
 -----
