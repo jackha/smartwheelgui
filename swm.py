@@ -1,3 +1,8 @@
+"""
+Smart Wheel Module: SmartWheel python binding
+
+The class uses threads for read and write separately.
+"""
 import json
 import threading
 import connection
@@ -25,16 +30,21 @@ def connected_fun(func):
 
 
 def slugify(s):
-    """non foolproof, but easy slugify function"""
+    """
+    non foolproof, but easy slugify function
+    """
     return s.lower().replace(' ', '-')
 
 
 class SWM(object):
     """
-    Smart wheel module: SmartWheel (or other serial object) python binding
+    Smart Wheel Module: SmartWheel python binding
 
-    The class uses threads for read and write separately, and a semaphore to 
-    prevent events to happen simultaneous.
+    The class uses threads for read and write separately.
+
+    You can use from_config to instantiate from a config filename.
+
+    POLL_COMMANDS are polled with interval update_period using the write thread.
     """
     CMD_DISABLE = '$0'
     CMD_ENABLE = '$1'
@@ -48,16 +58,19 @@ class SWM(object):
     CMD_LOAD_FROM_CONTROLLER = '$97'
     CMD_STORE_IN_CONTROLLER = '$98'
 
+    # (command, only first time)
     POLL_COMMANDS = [
-        ('$10', False),  # actual values
-        ('$11', False),
-        ('$13', False),
-        ('$15', False),
-        ('$29', True),
-        ('$50', False),
-        ('$58', False),
-        ('$59', False),
-        ('$60', True),    
+        ('$60', True),  # get adc labels
+        ('$29', True),  # get afirmware
+        ('$9', True),   # reset min max values adc
+        ('$50', True), # get PID parameters
+
+        ('$10', False),  # get voltages
+        ('$11', False),  # get status and errors
+        ('$13', False),  # get actual speed and direction
+        #('$15', False),
+        ('$58', False),  # get process times
+        ('$59', False),  # get counters
     ]
 
     SEPARATOR = '|'    
@@ -65,7 +78,7 @@ class SWM(object):
     STATE_CONNECTED = 'connected'
     STATE_NOT_CONNECTED = 'not-connected'
 
-    def __init__(self, connection, update_period=.2, populate_incoming=False):
+    def __init__(self, connection, update_period=.1, populate_incoming=False):
         """
         connection object
         update_period in seconds: poll info approximately at this rate
@@ -76,9 +89,16 @@ class SWM(object):
 
         self.counter = 0
         self.enabled = False
-        self.name = self.connection.conf.name
-        self.slug = slugify(self.name)
 
+        #self.name = self.connection.conf.name
+        #self.slug = slugify(self.name)
+
+        # for logging
+        # self.extra = self._extra()
+        logger.info(70*"*", extra=self.extra)
+        logger.info("*** New instance of SWM   ".ljust(70, '*'), extra=self.extra)
+        logger.info(70*"*", extra=self.extra)
+        logger.info("Connection info: %s" % str(connection))
         # self.connected = False
 
         # add actions to the write queue and the write thread will consume them
@@ -94,11 +114,6 @@ class SWM(object):
         self.timeout = self.connection.conf.timeout  
         # self.serial = serial_wrapper(self.serial_port, self.baudrate, timeout=timeout)  # '/dev/ttyS1', 19200, timeout=1
 
-        self._read_thread = threading.Thread(target=self.read_thread)
-        self._read_thread.start()
-        self._write_thread = threading.Thread(target=self.write_thread)
-        self._write_thread.start()
-
         # to be filled with read data
         # if you want to do something with the raw smart wheel responses yourself.
         # (if populate_incoming)
@@ -106,6 +121,7 @@ class SWM(object):
 
         # determines if self.incoming is being populated as messages come in.
         self.populate_incoming = populate_incoming  
+        logger.info("pop incoming %s" % self.populate_incoming, extra=self.extra)
 
         # report subscription: who wants to know my (debug) info??
         self.report_to = []
@@ -122,17 +138,26 @@ class SWM(object):
         self.read_counter = 0
         self.write_counter = 0
 
-        # for logging
-        self.extra = self._extra()
-
+        self._read_thread = threading.Thread(target=self.read_thread)
+        self._read_thread.start()
+        self._write_thread = threading.Thread(target=self.write_thread)
+        self._write_thread.start()
+        
     @classmethod
-    def from_config(
-        cls, filename):
-
+    def from_config(cls, filename):
+        """
+        Use a config filename to instantiate a SWM.
+        """
         conn = connection.Connection.from_file(filename)
         return cls(conn)
 
     def read_thread(self):
+        """
+        The read thread.
+
+        Read character by character to prevent losing messages and to prevent 
+        any blocking.
+        """
         while self.i_wanna_live:
             try:
                 if self.connection.is_connected():
@@ -159,16 +184,27 @@ class SWM(object):
                                 self.cmd_from_wheel[cleaned_item_split[0]] = cleaned_item_split
                                 self.cmd_counters[cleaned_item_split[0]] += 1
                                 self.total_reads += 1
+                                if cleaned_item_split[0] == '$1':
+                                    self.enabled = True
+                                elif cleaned_item_split[0] == '$0':
+                                    self.enabled = False
             except:
                 if self.connection.connection is None:
                     continue
                 err_msg = self.connection.connection.get_and_erase_last_error()
                 if err_msg:
                     self.message('ERROR in read thread from connection: %s' % err_msg)
+            self.update_state()
+
             sleep(0.01)  # 10 ms sleep
             self.read_counter += 1
 
     def write_thread(self):
+        """
+        The write thread.
+
+        Write the self.write_queue to a connection, with redundancy.
+        """
         next_poll = time.time()
         while self.i_wanna_live:
             try:
@@ -206,47 +242,63 @@ class SWM(object):
             self.write_counter += 1
 
     def subscribe(self, callback_fun):
-        """Subscribe instance for messages. will be called with (smart_wheel instance, message)"""
+        """
+        Subscribe function for messages. will be called with (smart_wheel instance, message)
+        """
         self.report_to.append(callback_fun)
 
     def connect(self):
+        """
+        Connect the connection object
+        """
         self.message("connect")
         logger.info("going to connect to connection!!", extra=self.extra)
         logger.debug(str(self.connection), extra=self.extra)
-        # self.serial = self.serial_wrapper(
-        #     self.serial_port, self.baudrate, timeout=self.timeout)  # '/dev/ttyS1', 19200, timeout=1
         return self.connection.connect()  # will create connection.connection
 
     def disconnect(self):
+        """
+        Disconnect the connection object, clear memory.
+        """
         self.cmd_from_wheel = {}  # reset all we've got from the wheel
         return self.connection.disconnect()
 
     def is_connected(self):
+        """
+        is_connected
+        """
         return self.connection.is_connected()
 
-    def status(self):
-        # TODO: return status of smartwheel as dict
-        return {'status': 'ok', 'counter': self.counter} 
+    # def status(self):
+    #     # TODO: return status of smartwheel as dict
+    #     return {'status': 'ok', 'counter': self.counter} 
 
-    def do_something(self):
-        self.counter += 1
+    # def do_something(self):
+    #     self.counter += 1
 
     @connected_fun
     def reset(self):
+        """
+        Reset command
+        """
         self.message("reset")
         self.write_queue.append(self.CMD_RESET)
         return self.CMD_RESET
 
     @connected_fun
     def enable(self):
-        self.enabled = True
+        """
+        Enable command
+        """
         self.write_queue.append(self.CMD_ENABLE)
         self.message("enable")
         return self.CMD_ENABLE
 
     @connected_fun
     def disable(self):
-        self.enabled = False
+        """
+        Disable command
+        """
         self.write_queue.append(self.CMD_DISABLE)
         self.message("disable")
         return self.CMD_DISABLE
@@ -254,6 +306,8 @@ class SWM(object):
     @connected_fun
     def command(self, cmd, once=False):
         """
+        Send command to write_queue
+
         'once' if we need only 1 reply with this command
         """
         self.message("Command: %s" % cmd, logging_only=True)
@@ -265,24 +319,49 @@ class SWM(object):
         return cmd
 
     def __str__(self):
-        return self.name
+        return '{wheel_name} [{wheel_slug}]'.format(**self.extra)
 
     def shut_down(self):
+        """
+        shut_down, let threads die
+        """
         self.message("shut down issued")
         self.i_wanna_live = False
 
     def message(self, msg, logging_only=False):
+        """
+        Message using log and optionally the callback function provided using 
+        subscribe.
+        """
         logger.debug("[%s] %s" % (str(self), msg), extra=self.extra)
         if not logging_only:
             for callback_fun in self.report_to:
                 callback_fun(self, "[%s] %s" % (str(self), msg))
 
     def update_state(self):
+        """
+        Update mu state, called from read thread. If we do it in realtime (lazy 
+        method), we risk writing on a disconnected connection.
+        """
         if self.connection.is_connected():
             self.state = self.STATE_CONNECTED
         else:
             self.state = self.STATE_NOT_CONNECTED
 
-    def _extra(self):
-        """return dict which can be used in logger.info(msg, extra=...)"""
-        return dict(wheel_name=self.name, wheel_slug=self.slug)
+    @property
+    def name(self):
+        """
+        transparently pass connection config name as the smart wheel name
+        """
+        return self.connection.conf.name
+
+    @property
+    def extra(self):
+        """
+        return dict which can be used in logger.info(msg, extra=...)
+
+        compose dict when called: it always uses actual variable values
+        """
+        name = self.name
+        slug = slugify(self.connection.conf.name)
+        return dict(wheel_name=name, wheel_slug=slug)

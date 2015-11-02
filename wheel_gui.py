@@ -1,7 +1,7 @@
 #!/usr/bin/python
 # -*- coding: utf-8 -*-
 """
-Connection config program
+Wheel gui: the specialized detailview of a SWM.
 """
 
 # python 2.x
@@ -30,6 +30,9 @@ logger = logging.getLogger(__name__)
 
 
 def just_try_it(orig_fun, *args, **kwargs):
+    """
+    Try to do something and fail silently if necessary.
+    """
     def fun(*args, **kwargs):
         try:
             orig_fun(*args, **kwargs)
@@ -42,7 +45,8 @@ def just_try_it(orig_fun, *args, **kwargs):
 
 
 class WheelGUI(object):
-
+    """
+    """
     PADDING = '10 2 10 4'
     CONTROL_PARAMS = [
         # label, label name (augmented with '-label', '-read' and '-input')
@@ -100,6 +104,11 @@ class WheelGUI(object):
 
     def __init__(
         self, root, parent=None, smart_wheel=None):
+        """
+        Init
+
+        default & create gui box.
+        """
         self.root = root
         self.parent = parent  # parent window, or None
         self.smart_wheel = smart_wheel  # either a SWM object, can't be None
@@ -204,6 +213,9 @@ class WheelGUI(object):
          
     @just_try_it
     def update_adc_table(self):
+        """
+        update adc table using most recent readings
+        """
         self.adc_tree = ttk.Treeview(self.adc_lf)
          
         self.adc_tree["columns"] = ('act', 'min', 'max')
@@ -229,25 +241,43 @@ class WheelGUI(object):
         self.adc_tree.grid(row=0, column=0, columnspan=3, sticky=tk.NSEW)
 
     def reset_min_max_adc(self):
+        """
+        send reset_min_max_adc command
+        """
         self.smart_wheel.command(self.smart_wheel.CMD_RESET_MIN_MAX_ADC)
 
     def load_from_wheel(self):
+        """
+        load settings from wheel EEPROM
+        """
         self.smart_wheel.command(self.smart_wheel.CMD_LOAD_FROM_CONTROLLER)
 
     def store_to_wheel(self):
+        """
+        save settings to wheel EEPROM
+        """
         self.smart_wheel.command(self.smart_wheel.CMD_STORE_IN_CONTROLLER)
 
     def store_pid(self, param_idx, param_value):
+        """
+        store a single PID value & send command $50 (get pid values) as well.
+        """
         self.smart_wheel.command('$51,%s,%s' % (str(param_idx), param_value))
+        self.smart_wheel.command('$50')
 
     def store_pid_fun(self, param_idx, entry_name):
+        """
+        store PID value wrapper 
+        """
         def fun(event): 
-            return self.store_pid(str(param_idx), self.smart_wheel.get_elem(entry_name).get())
+            self.store_pid(str(param_idx), self.smart_wheel.get_elem(entry_name).get())
         return fun
 
     def update_status_from_wheel(self):
         """
-        update gui from status of wheel - only call from main thread
+        update gui from status of wheel
+
+        !!only call from main thread!!
         """
         # see if dict is sometimes changed during read
         wheel_values = copy.deepcopy(self.smart_wheel.cmd_from_wheel)
@@ -257,6 +287,9 @@ class WheelGUI(object):
         self.update_adc_table()
 
     def set_control_params(self):
+        """
+        set GUI labels for all kinds of variables
+        """
         if '$50' not in self.smart_wheel.cmd_from_wheel:
             return
         cmd = self.smart_wheel.cmd_from_wheel['$50']
@@ -269,6 +302,11 @@ class WheelGUI(object):
         self.smart_wheel.set_label('module-address-input', cmd[7])
 
     def handle_cmd_from_wheel(self, cmd):
+        """
+        update GUI labels according to given cmd.
+
+        cmd is a list with strings.
+        """
         if cmd[0] == '$10':  # measurements, run $60 to find out number of measurements
             pass
         elif cmd[0] == '$11':  # status, error words
@@ -319,6 +357,9 @@ class WheelGUI(object):
 
 
 def wheel_gui(root, parent=None, smart_wheel=None,):
+    """
+    Create WheelGUI instance and attach to root.
+    """
     root.title("Details: %s" % str(smart_wheel))
     root.columnconfigure(0, weight=1)
     root.rowconfigure(0, weight=1)

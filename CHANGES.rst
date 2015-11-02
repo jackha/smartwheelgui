@@ -1,3 +1,21 @@
+2/11
+----
+
+- Added unique_address field.
+
+- Added lots of comments.
+
+- Better layout.
+
+- Updated poll commands.
+
+- Tuned logging; it is clearer when a new session starts.
+
+- Turned vertical slider upside-down.
+
+- Added steer-0 and stop buttons.
+
+
 26/10
 -----
 

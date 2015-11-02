@@ -1,10 +1,16 @@
+"""
+Help to set up logger with WheelLogHandler, which logs to a separate file per 
+wheel module.
+"""
 import logging
 import os
 import sys
 
 
 class WheelLogHandler(logging.Handler):
-    """Logs wheel logging to separate files
+    """
+    Log wheel logging to separate files
+    
     You must provide extra = {wheel_slug: ...} for the wheel specific logs
     Other logs will go to main.log
     """
@@ -18,7 +24,7 @@ class WheelLogHandler(logging.Handler):
         """
         try:
             msg = self.format(record)
-            if record.levelno <= self.level:
+            if record.levelno >= self.level:
                 filename = '%s.log' % record.__dict__.get('wheel_slug', 'main')
                 with open(os.path.join(self.logpath, filename), 'a') as f:
                     f.write(msg + '\n')
