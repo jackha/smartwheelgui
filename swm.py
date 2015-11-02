@@ -114,11 +114,6 @@ class SWM(object):
         self.timeout = self.connection.conf.timeout  
         # self.serial = serial_wrapper(self.serial_port, self.baudrate, timeout=timeout)  # '/dev/ttyS1', 19200, timeout=1
 
-        self._read_thread = threading.Thread(target=self.read_thread)
-        self._read_thread.start()
-        self._write_thread = threading.Thread(target=self.write_thread)
-        self._write_thread.start()
-
         # to be filled with read data
         # if you want to do something with the raw smart wheel responses yourself.
         # (if populate_incoming)
@@ -143,6 +138,11 @@ class SWM(object):
         self.read_counter = 0
         self.write_counter = 0
 
+        self._read_thread = threading.Thread(target=self.read_thread)
+        self._read_thread.start()
+        self._write_thread = threading.Thread(target=self.write_thread)
+        self._write_thread.start()
+        
     @classmethod
     def from_config(cls, filename):
         """
