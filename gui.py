@@ -1,7 +1,7 @@
 #!/usr/bin/python
 # -*- coding: utf-8 -*-
 """
-Author: Jack Ha
+Author: Jack Ha for Opteq
 License: lgpl
 
 Smart Wheel Module (SWM) main GUI program.
