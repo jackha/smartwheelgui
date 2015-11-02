@@ -80,6 +80,9 @@ class SocketWrapper(socket.socket):
 class SerialWrapper(Serial):
     """
     Wrapper includes coding and decoding to/from utf-8
+
+    The readline function reads one character at a time, to prevent blocking
+    and losing messages.
     """
     CR = '\r\n'
 
@@ -152,6 +155,10 @@ class SerialWrapper(Serial):
 class ConnectionConfig(object):
     """
     Keep connection info, as well as saving / loading connection configs.
+
+    as_dict produces a valid representation of the configuration.
+
+    use either from_dict, from_json or from_file to instantiate a configuration.
     """
 
     CONNECTION_TYPE_SERIAL = 'serial'
@@ -199,18 +206,27 @@ class ConnectionConfig(object):
         return result
 
     def save(self, filename):
+        """
+        Safe config to file
+        """
         logging.info("Saving [%s]..." % filename)
         with open(filename, 'w') as config_file:
             json.dump(self.as_dict(), config_file, indent=2)
 
     @classmethod
     def from_dict(cls, d):
+        """
+        Create and return instance of configuration as dict
+        """
         result = cls()
         result.set_vars(d)
         return result
 
     @classmethod
     def from_json(cls, json_string):
+        """
+        Create and return instance from json
+        """
         cfg = json.loads(json_string)
         result = cls()
         result.set_vars(cfg)
@@ -218,6 +234,9 @@ class ConnectionConfig(object):
 
     @classmethod
     def from_file(cls, filename):
+        """
+        Create and return instance from configuration filename
+        """
         with open(filename, 'r') as f:
             cfg = json.load(f)
         result = cls()
@@ -226,8 +245,9 @@ class ConnectionConfig(object):
 
     def set_vars(self, cfg):
         """
+        set all the necessary fields from a given cfg dict.
+
         cfg is a dict with all necessary fields;
-        
         function is used by from_json and from_file
         """
         self.set_var('connection_type', cfg['connection_type'])
@@ -246,7 +266,8 @@ class ConnectionConfig(object):
             self.set_var('unique_address', int(cfg['unique_address']))
 
     def set_var(self, var_name, var_value):
-        """Use set_var for setting class variables, it provides extra error 
+        """
+        Use set_var for setting class variables, it provides extra error 
         checking.
         """
         if var_name == 'comport':
@@ -269,6 +290,9 @@ class ConnectionConfig(object):
             logger.error("Tried to set unknown variable: %s" % var_name)
 
     def __str__(self):
+        """
+        String representation
+        """
         if self.connection_type == self.CONNECTION_TYPE_SERIAL:
             return "ConnectionConfig [%s]: id=%s serial port=%s, baudrate=%s, timeout=%s" % (
                 self.name, self.unique_address, self.comport, self.baudrate, self.timeout)
@@ -282,26 +306,36 @@ class ConnectionConfig(object):
 
 class Connection(object):
     """
-    A generic connection, using ConnectionConfig to instantiate ourselves
+    A generic connection that uses ConnectionConfig to instantiate ourselves
 
-    It contains a conf, connect using 'connect' and you 
-    will get a connection
+    It contains a ConnectionConfig object conf, connect using 'connect' and you 
+    will get a self.connection
     """
 
     def __init__(self):
+        """
+        Init
+
+        Default values
+        """
         self.conf = ConnectionConfig()
-        # self.connection_class = None
         self.connection = None  # it will remain None until 'connect' is called
         self.last_error = ''
         
     @classmethod
     def from_file(cls, filename):
+        """
+        Create and return Connection object from ConnectionConfig file.
+        """
         result = cls()
         result.conf = ConnectionConfig.from_file(filename)
         return result  # voila, a Connection object that is ready to rock & roll
 
     @classmethod
     def from_dict(cls, d):
+        """
+        Create instance with ConnectionConfig from dict
+        """
         result = cls()
         result.conf = ConnectionConfig.from_dict(d)
         return result  # voila, a Connection object that is ready to rock & roll
@@ -340,18 +374,28 @@ class Connection(object):
         self.connection = connection
 
     def disconnect(self):
+        """
+        disconnect
+        """
         connection = self.connection
         self.connection = None  # so no subthreads are using this connection
         connection.disconnect()  # now disconnect
 
     def is_connected(self):
+        """
+        is_connected
+        """
         if self.connection is not None:
             return True
         else:
             return False
 
     def status(self):
-        """return status string"""
+        """
+        return status string
+
+        for gui purposes
+        """
         msg = []
         if self.is_connected():
             msg.append('connected')
@@ -364,4 +408,7 @@ class Connection(object):
         return '. '.join(msg)
 
     def __str__(self):
+        """
+        String representation of connection
+        """
         return "Connection: conf=%s" % str(self.conf)

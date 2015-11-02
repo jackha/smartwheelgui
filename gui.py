@@ -963,7 +963,7 @@ def main():
     setup_logging(
         LOG_PATH, 
         file_level=logging.DEBUG, 
-        console_level=logging.DEBUG,
+        console_level=logging.INFO,
         # file_formatter='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
         # console_formatter='%(asctime)8s %(levelname)5s - %(message)s'
         )

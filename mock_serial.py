@@ -134,7 +134,7 @@ class MockSerial(object):
         Perform fake write.
         Data must be a comma-separated string.
         """
-        logger.info("incoming: %s" % data)
+        # logger.info("incoming: %s" % data)
         self.incoming.append(data)
         self._process_incoming()
 
@@ -175,7 +175,9 @@ class MockSerial(object):
                 response.extend([str(self.adc_min[k]) for k in self.adc_labels])
                 response.extend([str(self.adc_max[k]) for k in self.adc_labels])
             elif command[0] == '$11':
-                response = ['$11', str(random.randint(0,65535)), str(random.randint(0,65535))]
+                status_word = 2**3 * self.enabled + (random.randint(0,65535) & 0b1111111111110111)
+                error_word = random.randint(0,65535)
+                response = ['$11', str(status_word), str(error_word)]
             elif command[0] == '$13':
                 response = ['$13', 
                     str(self.actual_wheel_pos),
