@@ -206,15 +206,15 @@ class WheelGUI(object):
         lf.columnconfigure(0, weight=1)
         lf.rowconfigure(0, weight=1)
         
-        self.update_adc_table()
+        self.adc_iids = {}
+        self.create_adc_table()
 
         btn = ttk.Button(lf, text='Reset min/max', command=self.reset_min_max_adc)
         btn.grid(row=1, column=0)
-         
-    @just_try_it
-    def update_adc_table(self):
+
+    def create_adc_table(self):
         """
-        update adc table using most recent readings
+        create adc table using most recent readings
         """
         self.adc_tree = ttk.Treeview(self.adc_lf)
          
@@ -233,12 +233,36 @@ class WheelGUI(object):
             for i in range(num_labels):
                 label = self.smart_wheel.cmd_from_wheel[SWM.CMD_GET_ADC_LABELS][i+2]
                 adc = self.smart_wheel.cmd_from_wheel[SWM.CMD_GET_VOLTAGES]
-                self.adc_tree.insert("", "end", text=label, values=(adc[i+1], adc[i+num_labels+1], adc[i+num_labels*2+1]))
+                # initially set the values, but we change them later using update_adc_table
+                iid = self.adc_tree.insert(
+                    "", "end", 
+                    text=label, 
+                    values=(adc[i+1], adc[i+num_labels+1], adc[i+num_labels*2+1]))
+                self.adc_iids[label] = iid  # set item id for later referral
         else:
             # no data from wheel
             self.adc_tree.insert("", "end", text="ADC", values=('n/a', 'n/a', 'n/a'))
-        
+
         self.adc_tree.grid(row=0, column=0, columnspan=3, sticky=tk.NSEW)
+         
+    @just_try_it
+    def update_adc_table(self):
+        """
+        update adc table with most recent readings
+
+        self.adc_tree must be created using create_adc_table
+        """
+        if (SWM.CMD_GET_ADC_LABELS in self.smart_wheel.cmd_from_wheel and
+           SWM.CMD_GET_VOLTAGES in self.smart_wheel.cmd_from_wheel):
+            # CMD_GET_ADC_LABELS returns "'$60', '8', 'Vin', '3V3', 'NC', 'Curr1', 'Curr2', 'Nc2', 'Nc3', 'NTC'"
+            num_labels = int(self.smart_wheel.cmd_from_wheel[SWM.CMD_GET_ADC_LABELS][1])
+            for i in range(num_labels):
+                label = self.smart_wheel.cmd_from_wheel[SWM.CMD_GET_ADC_LABELS][i+2]
+                adc = self.smart_wheel.cmd_from_wheel[SWM.CMD_GET_VOLTAGES]
+                # set the values
+                self.adc_tree.set(self.adc_iids[label], column=0, value=adc[i+1])  # avg
+                self.adc_tree.set(self.adc_iids[label], column=1, value=adc[i+num_labels+1])  # min
+                self.adc_tree.set(self.adc_iids[label], column=2, value=adc[i+num_labels*2+1])  # max
 
     def reset_min_max_adc(self):
         """
