@@ -1,0 +1,6 @@
+{
+  "default_settings": ["default_propeller.json", "default_mock.json", "default_ethernet.json"],
+  "logrotate_filesize": 1000000,
+  "logrotate_numfiles": 10,
+  "log_path": "./logs"
+}  
