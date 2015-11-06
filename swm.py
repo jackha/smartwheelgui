@@ -51,12 +51,34 @@ class SWM(object):
     CMD_RESET = '$8'
     CMD_RESET_MIN_MAX_ADC = '$9'
     CMD_GET_VOLTAGES = '$10'
+    CMD_STATUS_ERROR = '$11'
     CMD_ACT_SPEED_DIRECTION = '$13'
     CMD_GET_FIRMWARE = '$29'
     CMD_GET_COUNTERS = '$59'
     CMD_GET_ADC_LABELS = '$60'
     CMD_LOAD_FROM_CONTROLLER = '$97'
     CMD_STORE_IN_CONTROLLER = '$98'
+
+    # status and error bits
+    STATUS_ENABLEBIT = 'status_enablebit'
+    STATUS_ESCONRDY1 = 'status_esconrdy1'
+    STATUS_ESCONRDY2 = 'status_esconrdy2'
+    STATUS_WHEELMOVE = 'status_wheelmove'
+    STATUS_STEERMOVE = 'status_steermove'
+    STATUS_JOYSTICKAC = 'status_joystickac'
+    STATUS_JOYSTICKM = 'status_joystickm'
+    STATUS_ALARMBIT = 'status_alarmbit'
+    ERROR_MAELIMPLUS = 'error_maelimplus'
+    ERROR_MAELIMMIN = 'error_maelimmin'
+    ERROR_MAECNTRERR = 'error_maecntrerr'
+    ERROR_VIMALARM = 'error_vimalarm'
+    ERROR_V5ALARM = 'error_v5alarm'
+    ERROR_V3V3 = 'error_v3v3'
+    ERROR_CURRENT1 = 'error_current1'
+    ERROR_CURRENT2 = 'error_current2'
+    ERROR_COMMANDFA = 'error_commandfa'
+    ERROR_WATCHDOG = 'error_watchdog'
+    ERROR_ALARMBIT = 'error_alarmbit'
 
     # (command, only first time)
     POLL_COMMANDS = [
@@ -318,45 +340,6 @@ class SWM(object):
             self.write_queue.append(cmd)
         return cmd
 
-    def get_adc_labels(self):
-        """
-        Return all adc labels, if available
-
-        CMD_GET_ADC_LABELS returns 
-        "'$60', '8', 'Vin', '3V3', 'NC', 'Curr1', 'Curr2', 'Nc2', 'Nc3', 'NTC'"
-        """
-        result = []
-        if self.CMD_GET_ADC_LABELS in self.cmd_from_wheel:
-            num_labels = int(self.cmd_from_wheel[self.CMD_GET_ADC_LABELS][1])
-            for i in range(num_labels):
-                label = self.cmd_from_wheel[self.CMD_GET_ADC_LABELS][i+2]
-                result.append(label)
-        return result
-
-    def get_adc_values(self, name):
-        """
-        return curr, min, max of requested adc variable
-
-        Raise ValueError if name is unknown
-
-        name is made case insensitive.
-
-        you must have already have results of the commands 
-        CMD_GET_ADC_LABELS and CMD_GET_VOLTAGES or you will get Nones
-        """
-        result = None, None, None
-        if (self.CMD_GET_ADC_LABELS in self.cmd_from_wheel and 
-            self.CMD_GET_VOLTAGES in self.cmd_from_wheel):
-
-            labels = self.get_adc_labels()
-            lower_labels = [l.lower() for l in labels]
-            num_labels = len(labels)
-            var_idx = lower_labels.index(name.lower())  # valueerror if not in list
-
-            adc = self.cmd_from_wheel[SWM.CMD_GET_VOLTAGES]
-            result = int(adc[var_idx+1]), int(adc[var_idx+num_labels+1]), int(adc[var_idx+num_labels*2+1])
-        return result
-
     def __str__(self):
         return '{wheel_name} [{wheel_slug}]'.format(**self.extra)
 
@@ -395,6 +378,18 @@ class SWM(object):
         return self.connection.conf.name
 
     @property
+    def extra(self):
+        """
+        return dict which can be used in logger.info(msg, extra=...)
+
+        compose dict when called: it always uses actual variable values
+        """
+        name = self.name
+        slug = slugify(self.connection.conf.name)
+        return dict(wheel_name=name, wheel_slug=slug)
+
+    ### From here: interpret data from wheel module helper functions
+    @property
     def firmware(self):
         """
         Return firmware name in a string
@@ -405,13 +400,81 @@ class SWM(object):
             result = ''.join(cmd[1:])
         return result
 
-    @property
-    def extra(self):
+    def _get_status_error(self):
         """
-        return dict which can be used in logger.info(msg, extra=...)
+        Return status and error words, if available
+        """
+        result = None, None
+        if self.CMD_STATUS_ERROR in self.cmd_from_wheel:
+            cmd = self.cmd_from_wheel[self.CMD_STATUS_ERROR]
+            status = int(cmd[1])
+            error = int(cmd[2])
+            result = status, error
+        return result
 
-        compose dict when called: it always uses actual variable values
+    def get_status_error(self):
         """
-        name = self.name
-        slug = slugify(self.connection.conf.name)
-        return dict(wheel_name=name, wheel_slug=slug)
+        Return status and errors in dict.
+        """
+        status, error = self._get_status_error()
+        result = {
+            self.STATUS_ENABLEBIT: bool(0b0000000000001000 & status > 0),
+            self.STATUS_ESCONRDY1: bool(0b0000000000010000 & status > 0),
+            self.STATUS_ESCONRDY2: bool(0b0000000000100000 & status > 0),
+            self.STATUS_WHEELMOVE: bool(0b0000000010000000 & status > 0),
+            self.STATUS_STEERMOVE: bool(0b0000000100000000 & status > 0),
+            self.STATUS_JOYSTICKAC: bool(0b0000001000000000 & status > 0),
+            self.STATUS_JOYSTICKM: bool(0b0000010000000000 & status > 0),
+            self.STATUS_ALARMBIT: bool(0b1000000000000000 & status > 0),
+            self.ERROR_MAELIMPLUS: bool(0b0000000000000001 & error > 0),
+            self.ERROR_MAELIMMIN: bool(0b0000000000000010 & error > 0),
+            self.ERROR_MAECNTRERR: bool(0b0000000000000100 & error > 0),
+            self.ERROR_VIMALARM: bool(0b0000000000001000 & error > 0),
+            self.ERROR_V5ALARM: bool(0b0000000000010000 & error > 0),
+            self.ERROR_V3V3: bool(0b0000000000100000 & error > 0),
+            self.ERROR_CURRENT1: bool(0b0000001000000000 & error > 0),
+            self.ERROR_CURRENT2: bool(0b0000010000000000 & error > 0),
+            self.ERROR_COMMANDFA: bool(0b0000100000000000 & error > 0),
+            self.ERROR_WATCHDOG: bool(0b0100000000000000 & error > 0),
+            self.ERROR_ALARMBIT: bool(0b1000000000000000 & error > 0),
+            }
+        return result
+
+    def get_adc_labels(self):
+        """
+        Return all adc labels, if available
+
+        CMD_GET_ADC_LABELS returns 
+        "'$60', '8', 'Vin', '3V3', 'NC', 'Curr1', 'Curr2', 'Nc2', 'Nc3', 'NTC'"
+        """
+        result = []
+        if self.CMD_GET_ADC_LABELS in self.cmd_from_wheel:
+            num_labels = int(self.cmd_from_wheel[self.CMD_GET_ADC_LABELS][1])
+            for i in range(num_labels):
+                label = self.cmd_from_wheel[self.CMD_GET_ADC_LABELS][i+2]
+                result.append(label)
+        return result
+
+    def get_adc_values(self, name):
+        """
+        return curr, min, max of requested adc variable
+
+        Raise ValueError if name is unknown
+
+        name is made case insensitive.
+
+        you must have already have results of the commands 
+        CMD_GET_ADC_LABELS and CMD_GET_VOLTAGES or you will get Nones
+        """
+        result = None, None, None
+        if (self.CMD_GET_ADC_LABELS in self.cmd_from_wheel and 
+            self.CMD_GET_VOLTAGES in self.cmd_from_wheel):
+
+            labels = self.get_adc_labels()
+            lower_labels = [l.lower() for l in labels]
+            num_labels = len(labels)
+            var_idx = lower_labels.index(name.lower())  # valueerror if not in list
+
+            adc = self.cmd_from_wheel[SWM.CMD_GET_VOLTAGES]
+            result = int(adc[var_idx+1]), int(adc[var_idx+num_labels+1]), int(adc[var_idx+num_labels*2+1])
+        return result
