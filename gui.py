@@ -895,18 +895,17 @@ class Interface():
             # $13, actual wheel position, actual wheel speed, actual steer position, actual steer<CR>
             smart_wheel.set_label(self.GUI_SPEED_ACTUAL, str(cmd[1]))
             smart_wheel.set_label(self.GUI_STEER_ACTUAL, str(cmd[3]))
-        if SWM.CMD_GET_FIRMWARE in cmds:
-            cmd = cmds[SWM.CMD_GET_FIRMWARE]
-            smart_wheel.set_label(self.GUI_FIRMWARE, ' '.join(cmd[1:]))
-        if SWM.CMD_GET_VOLTAGES in cmds:
-            cmd = cmds[SWM.CMD_GET_VOLTAGES]
-            c = cmd[1+6]  # TODO: make better
-            smart_wheel.set_label(self.GUI_VIN, c)  # avg for all vars, then all min, all max 
-            vin_min = int(c)
+
+        smart_wheel.set_label(self.GUI_FIRMWARE, smart_wheel.firmware)
+
+        vin_cur, vin_min, vin_max = smart_wheel.get_adc_values('Vin')
+        if vin_min is not None:
+            smart_wheel.set_label(self.GUI_VIN, vin_min)
             if vin_min < 10500:
                 smart_wheel.set_color(self.GUI_VIN, 'red')
             else:
                 smart_wheel.set_color(self.GUI_VIN, 'black')
+
         if smart_wheel.enabled:
             smart_wheel.set_label(self.GUI_WHEEL_ENABLED, 'true')
             smart_wheel.set_color(self.GUI_WHEEL_ENABLED, 'darkgreen')

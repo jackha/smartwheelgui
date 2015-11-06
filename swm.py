@@ -318,6 +318,45 @@ class SWM(object):
             self.write_queue.append(cmd)
         return cmd
 
+    def get_adc_labels(self):
+        """
+        Return all adc labels, if available
+
+        CMD_GET_ADC_LABELS returns 
+        "'$60', '8', 'Vin', '3V3', 'NC', 'Curr1', 'Curr2', 'Nc2', 'Nc3', 'NTC'"
+        """
+        result = []
+        if self.CMD_GET_ADC_LABELS in self.cmd_from_wheel:
+            num_labels = int(self.cmd_from_wheel[self.CMD_GET_ADC_LABELS][1])
+            for i in range(num_labels):
+                label = self.cmd_from_wheel[self.CMD_GET_ADC_LABELS][i+2]
+                result.append(label)
+        return result
+
+    def get_adc_values(self, name):
+        """
+        return curr, min, max of requested adc variable
+
+        Raise ValueError if name is unknown
+
+        name is made case insensitive.
+
+        you must have already have results of the commands 
+        CMD_GET_ADC_LABELS and CMD_GET_VOLTAGES or you will get Nones
+        """
+        result = None, None, None
+        if (self.CMD_GET_ADC_LABELS in self.cmd_from_wheel and 
+            self.CMD_GET_VOLTAGES in self.cmd_from_wheel):
+
+            labels = self.get_adc_labels()
+            lower_labels = [l.lower() for l in labels]
+            num_labels = len(labels)
+            var_idx = lower_labels.index(name.lower())  # valueerror if not in list
+
+            adc = self.cmd_from_wheel[SWM.CMD_GET_VOLTAGES]
+            result = int(adc[var_idx+1]), int(adc[var_idx+num_labels+1]), int(adc[var_idx+num_labels*2+1])
+        return result
+
     def __str__(self):
         return '{wheel_name} [{wheel_slug}]'.format(**self.extra)
 
@@ -354,6 +393,17 @@ class SWM(object):
         transparently pass connection config name as the smart wheel name
         """
         return self.connection.conf.name
+
+    @property
+    def firmware(self):
+        """
+        Return firmware name in a string
+        """
+        result = '(none retrieved yet)'
+        if self.CMD_GET_FIRMWARE in self.cmd_from_wheel:
+            cmd = self.cmd_from_wheel[SWM.CMD_GET_FIRMWARE]
+            result = ''.join(cmd[1:])
+        return result
 
     @property
     def extra(self):

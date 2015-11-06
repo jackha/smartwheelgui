@@ -76,3 +76,20 @@ Each separate SWM:
 - Enable / disable / steer / speed the SWM
 - Edit / inspect the SWM (wheel_gui.py)
 - Low level commands to SWM.
+
+
+# Linux list_ports Hack
+Fixes list_ports in Python 3.  Do not apply this patch to pySerial if you are running Python 2.x.
+### Python3
+If you receive the error `TypeError: can't use a string pattern on a bytes-like object`, traced back to within pySerial, apply this patch (more info: [link](http://stackoverflow.com/questions/5184483/python-typeerror-on-regex)).
+#### listports.patch
+Created with `diff -u list_ports_posix_old.py list_ports_posix_new.py > listports.patch`.
+
+To use:
+
+    cd /usr/lib/python3/dist-packages/serial
+    sudo patch tools/list_ports_posix.py < /[path of patch file on your machine]/listports.patch
+#### list_ports_posix_old.py
+This is our backup of the `list_ports_posix.py` file.
+#### list_ports_posix_new.py
+This is what your `list_ports_posix.py` file should look like after applying the patch.

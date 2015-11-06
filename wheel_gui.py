@@ -360,7 +360,7 @@ class WheelGUI(object):
             pass
         elif cmd[0] == '$29':
             # firmware
-            self.smart_wheel.set_label(self.LBL_FIRMWARE, ' '.join(cmd[1:]))
+            self.smart_wheel.set_label(self.LBL_FIRMWARE, self.smart_wheel.firmware)
         elif cmd[0] == '$50':
             self.smart_wheel.set_label('kpid-wheel-read', cmd[1])
             self.smart_wheel.set_label('kpid-steer-read', cmd[2])
