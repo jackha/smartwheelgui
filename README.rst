@@ -67,8 +67,6 @@ on mac::
 
 on ubuntu::
 
-::
-
     comports testprogram
     looking for comports...
     ports found:
