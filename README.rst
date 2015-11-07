@@ -110,6 +110,8 @@ Ubuntu/linux list_ports Hack
 
 source: https://github.com/AerospaceRobotics/RPLidar-SLAMbot/blob/master/README.md
 
+** UNTESTED **
+
 Fixes list_ports in Python 3.  Do not apply this patch to pySerial if you are running Python 2.x.
 
 Python3
