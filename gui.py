@@ -1009,7 +1009,7 @@ def main():
     logger.info("command line arguments: %s" % str(args))
 
     root = tk.Tk()
-    root.title("SmartWheel controller")
+    root.title("Opteq Smart Wheel controller")
 
     smart_modules = []
     smart_wheels_loaded = False
