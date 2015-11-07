@@ -100,14 +100,18 @@ class SWM(object):
     STATE_CONNECTED = 'connected'
     STATE_NOT_CONNECTED = 'not-connected'
 
-    def __init__(self, connection, update_period=.1, populate_incoming=False):
+    def __init__(self, connection, update_period=.1, populate_incoming=False, poll_status=True):
         """
         connection object
         update_period in seconds: poll info approximately at this rate
+
+        poll_status: normally you want to pull the status, except when you want
+        to do it manually or it already happens (with a remote connection?)
         """
 
         self.connection = connection
         self.update_period = update_period
+        self.poll_status = poll_status
 
         self.counter = 0
         # self.enabled = False
@@ -244,7 +248,7 @@ class SWM(object):
                     self.message('ERROR in write thread from connection: %s' % err_msg)
             
             # update variables poll
-            if self.connection.is_connected():
+            if self.poll_status and self.connection.is_connected():
                 curr_time = time.time()
                 do_poll = False
                 if (curr_time - next_poll) > 10 * self.update_period:

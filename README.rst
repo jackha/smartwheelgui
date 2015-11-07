@@ -130,3 +130,19 @@ Each separate SWM:
 - Enable / disable / steer / speed the SWM
 - Edit / inspect the SWM (wheel_gui.py)
 - Low level commands to SWM.
+
+
+Client-server
+-------------
+
+This feature is highly experimental.
+
+You can start a server somewhere, for example on a raspberry pi::
+
+    $ python3 server.py --host 192.168.1.36 --port 5000 wheel_config_pi.json
+
+This will start the listening server.
+
+In the GUI (on another computer), select ethernet connection, provide ip host 
+address and port and press connect.
+
