@@ -43,7 +43,7 @@ Install your PyPI package pyserial: run
 Raspbian jessie
 ===============
 
-it seems that all the dependencies are already installed!
+It seems that all the dependencies are already installed!
 
     $ sudo pip-3.2 install --upgrade pyserial
 

@@ -69,10 +69,12 @@ if __name__ == '__main__':
         print('Connected by', addr)
         while True:
             data = conn.recv(1024)
-            print("from remote [%s]" % data)
+            # print("from remote [%s]" % data)
             if not data: break
             # conn.send(data)
-            module.command(data.decode('UTF-8'))
+            data_decoded = data.decode('UTF-8')
+            print('From remote: %s' % data_decoded)
+            module.command(data_decoded)
 
             print(i, 'Data ', data)
 
