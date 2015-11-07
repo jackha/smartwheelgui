@@ -131,6 +131,31 @@ Each separate SWM:
 - Edit / inspect the SWM (wheel_gui.py)
 - Low level commands to SWM.
 
+Config
+======
+
+The default settings in settings.json looks like::
+
+{
+  "default_settings": ["default_propeller.json", "default_mock.json", "default_ethernet.json"],
+  "logrotate_filesize": 1000000,
+  "logrotate_numfiles": 10,
+  "log_path": "./logs"
+}
+
+The settings are quite straight forward. Log files are created with the connection
+name as filename. The log files are rotated according to the settings. 
+
+
+Troubleshooting
+===============
+
+- If for any reason the gui configuration is messed up, you can quit the program,
+  delete _guistate.json, and try again. This will start the program with defaults.
+
+- If you cannot connect to the wheel module, try going to the config and see
+  what comport you can select. Select one and try again.
+
 
 Client-server
 -------------
@@ -145,4 +170,5 @@ This will start the listening server.
 
 In the GUI (on another computer), select ethernet connection, provide ip host 
 address and port and press connect.
+
 

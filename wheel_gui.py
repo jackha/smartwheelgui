@@ -69,9 +69,9 @@ class WheelGUI(object):
         'module-address': '6',
     }
     STATUS_PARAMS = [
-        'PF status',
-        'cnt: PID, PLC, MAE',
-        'time (us): PID, PLC, MAE',
+        # 'PF status',
+        # 'cnt: PID, PLC, MAE',
+        # 'time (us): PID, PLC, MAE',
         'process',
         'counters',
         ]
