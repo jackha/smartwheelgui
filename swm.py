@@ -110,7 +110,7 @@ class SWM(object):
         self.update_period = update_period
 
         self.counter = 0
-        self.enabled = False
+        # self.enabled = False
 
         #self.name = self.connection.conf.name
         #self.slug = slugify(self.name)
@@ -206,10 +206,10 @@ class SWM(object):
                                 self.cmd_from_wheel[cleaned_item_split[0]] = cleaned_item_split
                                 self.cmd_counters[cleaned_item_split[0]] += 1
                                 self.total_reads += 1
-                                if cleaned_item_split[0] == '$1':
-                                    self.enabled = True
-                                elif cleaned_item_split[0] == '$0':
-                                    self.enabled = False
+                                # if cleaned_item_split[0] == '$1':
+                                #     self.enabled = True
+                                # elif cleaned_item_split[0] == '$0':
+                                #     self.enabled = False
             except:
                 if self.connection.connection is None:
                     continue
@@ -400,11 +400,15 @@ class SWM(object):
             result = ''.join(cmd[1:])
         return result
 
+    @property
+    def enabled(self):
+        return self.get_status_error()[self.STATUS_ENABLEBIT]
+
     def _get_status_error(self):
         """
         Return status and error words, if available
         """
-        result = None, None
+        result = 0, 0
         if self.CMD_STATUS_ERROR in self.cmd_from_wheel:
             cmd = self.cmd_from_wheel[self.CMD_STATUS_ERROR]
             status = int(cmd[1])

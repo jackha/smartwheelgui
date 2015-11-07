@@ -337,7 +337,6 @@ class WheelGUI(object):
             # status = int(cmd[1])
             # error = int(cmd[2])
             status_error = self.smart_wheel.get_status_error()
-            logger.info('Status and error: %r' % str(status_error))
             self.smart_wheel.set_label('3 EnableBit-read', int(status_error[SWM.STATUS_ENABLEBIT]))
             self.smart_wheel.set_label('4 Esconrdy1-read', int(status_error[SWM.STATUS_ESCONRDY1]))
             self.smart_wheel.set_label('5 Esconrdy2-read', int(status_error[SWM.STATUS_ESCONRDY2]))
