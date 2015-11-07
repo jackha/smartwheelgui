@@ -16,11 +16,8 @@ http://www.opteq.nl/
 Prerequisities
 --------------
 
-python 3.4
-
-pyserial::
-
-    $ pip install pyserial
+You need python3 (tested with 3.4) with pyserial and tkinter. See below for 
+installation instructions.
 
 macosx
 ======
@@ -33,9 +30,9 @@ https://www.python.org/download/mac/tcltk/
 Ubuntu / raspbian
 =================
 
-Install python3 with python3-setuptools
+Install python3 with python3-setuptools and tk.
 
-    $ sudo apt-get install python3 python3-setuptools
+    $ sudo apt-get install python3 python3-setuptools python3-tk
 
 This will give you the commands python3 and easy_install3.
 
@@ -49,12 +46,15 @@ Install your PyPI package pyserial: run
 
     $ sudo pip3.2 install pyserial 
 
-Test the comports function using test_comports; on some systems it will crash 
-and we refer to 'Ubuntu/linux list_ports Hack' (see below).
+Test the comports function using test_comports. On some systems the program will 
+crash with something like '' and we refer to 'Ubuntu/linux list_ports Hack' 
+(see below).
 
-    on mac:
-    $ python3 test_comports.py 
+    $ python3 test_comports.py
 
+on mac::
+
+``
     comports testprogram
     looking for comports...
     ports found:
@@ -63,7 +63,22 @@ and we refer to 'Ubuntu/linux list_ports Hack' (see below).
     /dev/tty.Bluetooth-Incoming-Port n/a n/a
     /dev/tty.Bluetooth-Modem n/a n/a
     /dev/tty.usbserial-DAYO2UPE n/a n/a
+``
 
+on ubuntu:
+
+``
+    comports testprogram
+    looking for comports...
+    ports found:
+    /dev/ttyS31 ttyS31 n/a
+    ...
+    /dev/ttyS2 ttyS2 n/a
+    /dev/ttyS1 ttyS1 n/a
+    /dev/ttyS0 ttyS0 n/a
+    /dev/ttyUSB0 Future Technology Devices International, Ltd None  USB VID:PID=0403:6015 SNR=DAYO2UPE
+    /dev/ttyACM0 ttyACM0 USB VID:PID=2341:0010 SNR=85235333135351A01151
+``
     
 Features
 --------
