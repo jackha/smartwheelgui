@@ -33,21 +33,36 @@ https://www.python.org/download/mac/tcltk/
 Ubuntu / raspbian
 =================
 
-Install package python3-setuptools: run 
+Install python3 with python3-setuptools
 
-    $ sudo apt-get install python3-setuptools
+    $ sudo apt-get install python3 python3-setuptools
 
-this will give you the command easy_install3.
+This will give you the commands python3 and easy_install3.
 
 Install pip using Python 3's setuptools: run 
 
     $ sudo easy_install3 pip
 
-this will give you the command pip-3.2 like kev's solution.
+this will give you the command pip3.2.
 
-Install your PyPI packages: run 
+Install your PyPI package pyserial: run 
 
-    $ sudo pip-3.2 install pyserial 
+    $ sudo pip3.2 install pyserial 
+
+Test the comports function using test_comports; on some systems it will crash 
+and we refer to 'Ubuntu/linux list_ports Hack' (see below).
+
+    on mac:
+    $ python3 test_comports.py 
+
+    comports testprogram
+    looking for comports...
+    ports found:
+    no comports found.
+    ports found using custom version that behaves differently on osx
+    /dev/tty.Bluetooth-Incoming-Port n/a n/a
+    /dev/tty.Bluetooth-Modem n/a n/a
+    /dev/tty.usbserial-DAYO2UPE n/a n/a
 
     
 Features

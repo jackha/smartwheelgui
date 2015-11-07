@@ -260,6 +260,19 @@ class ConfigGUI(object):
         self.root.destroy()
 
 
+def comports_osx():
+    """
+    Custom version of comports that behaves differently on macos.
+
+
+    """
+    com_ports = comports()
+    if not com_ports and os.name == 'posix' and sys.platform.lower() == 'darwin':  # osx
+        import glob
+        com_ports = [[p, 'n/a', 'n/a'] for p in glob.glob('/dev/tty.*')]
+    return com_ports
+
+
 def config_gui(root, parent=None, smart_wheel=None, connection_config=None):
     """Create config gui, root is tk frame"""
     root.title("Connection config")
