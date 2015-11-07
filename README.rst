@@ -54,8 +54,6 @@ crash with something like '' and we refer to 'Ubuntu/linux list_ports Hack'
 
 on mac::
 
-::
-
     comports testprogram
     looking for comports...
     ports found:
