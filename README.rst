@@ -17,14 +17,7 @@ Prerequisities
 --------------
 
 You need python3 (tested with 3.4) with pyserial and tkinter. See below for 
-installation instructions.
-
-macosx
-======
-
-new ActiveTcl
-
-https://www.python.org/download/mac/tcltk/
+installation instructions for each OS.
 
 
 Ubuntu
@@ -45,6 +38,37 @@ this will give you the command pip3.2 (or pip-3.2 on raspbian).
 Install your PyPI package pyserial: run 
 
     $ sudo pip3.2 install pyserial 
+
+
+Raspbian jessie
+===============
+
+it seems that all the dependencies are already installed!
+
+    $ sudo pip-3.2 install --upgrade pyserial
+
+This will upgrade pyserial from 2.6 to 2.7.
+The 'comports' function in version 2.6 is broken in our system and will give 
+the error ``TypeError: can't use a string pattern on a bytes-like object``. 
+
+
+OSX
+===
+
+Install python3 in a regular way. Starting from python3.4, pip is included
+in the binaries, how convenient!
+
+pyserial::
+
+    $ pip3.4 install pyserial
+
+you need a new ActiveTcl
+
+https://www.python.org/download/mac/tcltk/
+
+
+Testing
+-------
 
 Test the comports function using test_comports.
 
@@ -78,18 +102,6 @@ output on ubuntu::
     /dev/ttyS0 ttyS0 n/a
     /dev/ttyUSB0 Future Technology Devices International, Ltd None  USB VID:PID=0403:6015 SNR=DAYO2UPE
     /dev/ttyACM0 ttyACM0 USB VID:PID=2341:0010 SNR=85235333135351A01151
-
-
-Raspbian jessie
-===============
-
-it seems that all the dependencies are already installed!
-
-    $ sudo pip-3.2 install --upgrade pyserial
-
-This will upgrade pyserial from 2.6 to 2.7.
-The 'comports' function in version 2.6 is broken in our system and will give 
-the error ``TypeError: can't use a string pattern on a bytes-like object``. 
 
     
 Features
