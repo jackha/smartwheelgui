@@ -100,7 +100,7 @@ class WheelGUI(object):
     ]
     ADC_COLUMNS = ('param', 'act', 'min', 'max')
     
-    LBL_FIRMWARE = 'firmware'
+    LBL_FIRMWARE = 'wheel_gui_firmware'
 
     def __init__(
         self, root, parent=None, smart_wheel=None):
