@@ -54,7 +54,8 @@ crash with something like '' and we refer to 'Ubuntu/linux list_ports Hack'
 
 on mac::
 
-``
+::
+
     comports testprogram
     looking for comports...
     ports found:
@@ -63,11 +64,11 @@ on mac::
     /dev/tty.Bluetooth-Incoming-Port n/a n/a
     /dev/tty.Bluetooth-Modem n/a n/a
     /dev/tty.usbserial-DAYO2UPE n/a n/a
-``
 
-on ubuntu:
+on ubuntu::
 
-``
+::
+
     comports testprogram
     looking for comports...
     ports found:
@@ -78,7 +79,7 @@ on ubuntu:
     /dev/ttyS0 ttyS0 n/a
     /dev/ttyUSB0 Future Technology Devices International, Ltd None  USB VID:PID=0403:6015 SNR=DAYO2UPE
     /dev/ttyACM0 ttyACM0 USB VID:PID=2341:0010 SNR=85235333135351A01151
-``
+
     
 Features
 --------
