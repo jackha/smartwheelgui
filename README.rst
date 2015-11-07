@@ -47,12 +47,12 @@ Install your PyPI package pyserial: run
     $ sudo pip3.2 install pyserial 
 
 Test the comports function using test_comports. On some systems the program will 
-crash with something like '' and we refer to 'Ubuntu/linux list_ports Hack' 
-(see below).
+crash with something like ``TypeError: can't use a string pattern on a bytes-like object`` 
+and we refer to 'Ubuntu/linux list_ports Hack' (see below).
 
     $ python3 test_comports.py
 
-on mac::
+output on mac::
 
     comports testprogram
     looking for comports...
@@ -63,7 +63,7 @@ on mac::
     /dev/tty.Bluetooth-Modem n/a n/a
     /dev/tty.usbserial-DAYO2UPE n/a n/a
 
-on ubuntu::
+output on ubuntu::
 
     comports testprogram
     looking for comports...
