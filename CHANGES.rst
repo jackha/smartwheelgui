@@ -17,7 +17,9 @@
 
 - 'wheel enabled' in main screen is a an actual status bit readout.
 
-- ethernet method does not work anymore.
+- ethernet method does not work anymore
+
+- added test_comports testprogram
 
 
 2/11
