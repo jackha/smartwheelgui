@@ -311,6 +311,7 @@ class Interface():
         self.gui_message_queue = []  # (smart_wheel, msg)
         self.gui_set_label_queue = []  # (smart_wheel, label_name, text)
         self.gui_set_tab_name_queue = []  # tab, text
+        self.gui_set_scale_queue = []  # scale (object, value)
         self.update_me()
 
     def update_me(self):
@@ -363,6 +364,13 @@ class Interface():
         try:
             sw, label_name, txt = self.gui_set_label_queue.pop(0)
             sw.set_label(label_name, txt)
+        except:
+            pass
+
+        # set scale
+        try:
+            sc, value = self.gui_set_scale_queue.pop(0)
+            sc.set(value)
         except:
             pass
 
@@ -709,6 +717,12 @@ class Interface():
         """
         self.gui_set_label_queue.append((smart_wheel, label_name, text))
 
+    def set_scale(self, scale, value):
+        """
+        Set scale value for speed and steer using a queue
+        """
+        self.gui_set_scale_queue.append((scale, value))
+
     def set_steer(self, smart_wheel, new_steer):
         """
         Set steer
@@ -722,7 +736,7 @@ class Interface():
         cmd = '$2,%d,%d' % (self.speed_set_point, self.steer_set_point)
         self.message(smart_wheel, '-> [%s]' % cmd)
         smart_wheel.command(cmd)
-
+        
     def set_steer_fun(self, smart_wheel):
         """
         Wrapper for set_steer to eliminate the smart_wheel option.
@@ -863,9 +877,11 @@ class Interface():
             elif action == 'speed-0':
                 self.set_speed(smart_wheel, 0)
                 self.message(smart_wheel, 'speed-0')
+                self.set_scale(smart_wheel.get_elem(self.GUI_SPEED_SCALE), 0)
             elif action == 'steer-0':
                 self.set_steer(smart_wheel, 0)
                 self.message(smart_wheel, 'steer-0')
+                self.set_scale(smart_wheel.get_elem(self.GUI_STEER_SCALE), 0)
 
         except NotConnectedException as err:
             self.message(smart_wheel, 'Oops, there was an error: {}'.format(err))

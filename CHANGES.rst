@@ -23,6 +23,8 @@
 
 - rotating logfiles, configure with settings.json
 
+- scale-0 and speed-0 now set the scale too
+
 - ethernet method does not work correctly anymore: you can connect and probably
   send commands, but you do not get things back.
 
