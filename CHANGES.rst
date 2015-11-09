@@ -21,6 +21,8 @@
 
 - added settings.json: see readme for explanation
 
+- rotating logfiles, configure with settings.json
+
 - ethernet method does not work correctly anymore: you can connect and probably
   send commands, but you do not get things back.
 
