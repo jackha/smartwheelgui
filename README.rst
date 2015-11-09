@@ -39,6 +39,14 @@ Install your PyPI package pyserial: run
 
     $ sudo pip3.2 install pyserial 
 
+Note: pip3.2 might be named something else, type 'pip', then tab to 
+autocomplete.
+
+You might need to upgrade pyserial. Version 2.6 is old and gives problems.
+To upgrade::
+
+    $ sudo pip3.2 install --upgrade pyserial
+
 
 Raspbian jessie
 ===============
