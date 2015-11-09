@@ -17,9 +17,12 @@
 
 - 'wheel enabled' in main screen is a an actual status bit readout.
 
-- ethernet method does not work anymore
-
 - added test_comports testprogram
+
+- added settings.json: see readme for explanation
+
+- ethernet method does not work correctly anymore: you can connect and probably
+  send commands, but you do not get things back.
 
 
 2/11
