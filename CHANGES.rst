@@ -1,3 +1,25 @@
+9/11
+----
+
+- vin bug fixed (hopefully): it should show correctly on main screen
+
+- "ubuntu bug": update pyserial to 2.7 using pip3 and it should be fine
+
+- readme and tested a lot
+
+- vin and other adc parameters are now available in SWM class
+
+- firmware name in SWM class
+
+- error and status bits interpretation in SWM class
+
+- tested with raspberry pi, ubuntu, mac osx
+
+- 'wheel enabled' in main screen is a an actual status bit readout.
+
+- ethernet method does not work anymore.
+
+
 2/11
 ----
 
