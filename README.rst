@@ -10,6 +10,7 @@ Wheel Module (SWM in short).
 - a python wrapper class SWM: this class can be used in your own program to
   control and monitor the SWM.
 
+http://probotics.eu/
 http://www.opteq.nl/
 
 
