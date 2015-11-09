@@ -53,10 +53,9 @@ UPDATE_TIME = 0.01
 UPDATE_TIME_SLOW = 0.2
 
 GUI_STATE_FILENAME = '_guistate.json'
-# TODO: to be used
-DEFAULT_CONFIGS = ['default_propeller.json', 'default_mock.json', 'default_ethernet.json', ]
+SETTINGS_FILENAME = 'settings.json'
 
-LOG_PATH = './logs'
+#LOG_PATH = './logs'
 
 # SWM.incoming will get filled, the gui must pull the messages.
 POPULATE_INCOMING = True
@@ -312,6 +311,7 @@ class Interface():
         self.gui_message_queue = []  # (smart_wheel, msg)
         self.gui_set_label_queue = []  # (smart_wheel, label_name, text)
         self.gui_set_tab_name_queue = []  # tab, text
+        self.gui_set_scale_queue = []  # scale (object, value)
         self.update_me()
 
     def update_me(self):
@@ -364,6 +364,13 @@ class Interface():
         try:
             sw, label_name, txt = self.gui_set_label_queue.pop(0)
             sw.set_label(label_name, txt)
+        except:
+            pass
+
+        # set scale
+        try:
+            sc, value = self.gui_set_scale_queue.pop(0)
+            sc.set(value)
         except:
             pass
 
@@ -710,6 +717,12 @@ class Interface():
         """
         self.gui_set_label_queue.append((smart_wheel, label_name, text))
 
+    def set_scale(self, scale, value):
+        """
+        Set scale value for speed and steer using a queue
+        """
+        self.gui_set_scale_queue.append((scale, value))
+
     def set_steer(self, smart_wheel, new_steer):
         """
         Set steer
@@ -723,7 +736,7 @@ class Interface():
         cmd = '$2,%d,%d' % (self.speed_set_point, self.steer_set_point)
         self.message(smart_wheel, '-> [%s]' % cmd)
         smart_wheel.command(cmd)
-
+        
     def set_steer_fun(self, smart_wheel):
         """
         Wrapper for set_steer to eliminate the smart_wheel option.
@@ -864,9 +877,11 @@ class Interface():
             elif action == 'speed-0':
                 self.set_speed(smart_wheel, 0)
                 self.message(smart_wheel, 'speed-0')
+                self.set_scale(smart_wheel.get_elem(self.GUI_SPEED_SCALE), 0)
             elif action == 'steer-0':
                 self.set_steer(smart_wheel, 0)
                 self.message(smart_wheel, 'steer-0')
+                self.set_scale(smart_wheel.get_elem(self.GUI_STEER_SCALE), 0)
 
         except NotConnectedException as err:
             self.message(smart_wheel, 'Oops, there was an error: {}'.format(err))
@@ -896,18 +911,17 @@ class Interface():
             # $13, actual wheel position, actual wheel speed, actual steer position, actual steer<CR>
             smart_wheel.set_label(self.GUI_SPEED_ACTUAL, str(cmd[1]))
             smart_wheel.set_label(self.GUI_STEER_ACTUAL, str(cmd[3]))
-        if SWM.CMD_GET_FIRMWARE in cmds:
-            cmd = cmds[SWM.CMD_GET_FIRMWARE]
-            smart_wheel.set_label(self.GUI_FIRMWARE, ' '.join(cmd[1:]))
-        if SWM.CMD_GET_VOLTAGES in cmds:
-            cmd = cmds[SWM.CMD_GET_VOLTAGES]
-            c = cmd[1+6]  # TODO: make better
-            smart_wheel.set_label(self.GUI_VIN, c)  # avg for all vars, then all min, all max 
-            vin_min = int(c)
+
+        smart_wheel.set_label(self.GUI_FIRMWARE, smart_wheel.firmware)
+
+        vin_cur, vin_min, vin_max = smart_wheel.get_adc_values('Vin')
+        if vin_min is not None:
+            smart_wheel.set_label(self.GUI_VIN, vin_min)
             if vin_min < 10500:
                 smart_wheel.set_color(self.GUI_VIN, 'red')
             else:
                 smart_wheel.set_color(self.GUI_VIN, 'black')
+
         if smart_wheel.enabled:
             smart_wheel.set_label(self.GUI_WHEEL_ENABLED, 'true')
             smart_wheel.set_color(self.GUI_WHEEL_ENABLED, 'darkgreen')
@@ -958,12 +972,38 @@ class Interface():
         smart_wheel.get_elem(self.GUI_OUTPUT_FIELD).yview('end -1 chars')  # scroll down
 
 
+def read_settings():
+    """
+    Read settings from SETTINGS_FILENAME and return contents.
+
+    with error messages and exiting when something is wrong
+    """
+    try:
+        with open(SETTINGS_FILENAME, 'r') as settings_file:
+            settings = json.load(settings_file)
+    except ValueError:
+        print(
+            "Invalid settings file [%s], consider copying example_settings.json over it." % SETTINGS_FILENAME)
+        sys.exit(1)
+
+    for k in {'default_settings', 'logrotate_filesize', 'logrotate_numfiles', 'log_path'}:
+        if k not in settings:
+            print("Missing key [%s] in settings file [%s], look at example_settings.json" % (k, SETTINGS_FILENAME))
+            sys.exit(1)
+    return settings
+
+
 def main():
+    # read settings, must be valid json
+    settings = read_settings()
+
     # set up logging
     setup_logging(
-        LOG_PATH, 
+        settings['log_path'], 
         file_level=logging.DEBUG, 
         console_level=logging.INFO,
+        logrotate_filesize=settings['logrotate_filesize'],
+        logrotate_numfiles=settings['logrotate_numfiles'],
         # file_formatter='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
         # console_formatter='%(asctime)8s %(levelname)5s - %(message)s'
         )
@@ -972,6 +1012,10 @@ def main():
     logger.info("*** SWM GUI ".ljust(70, '*'))
     logger.info(70*"*")
     logger.info("")
+
+    logger.info("log_path: %s" % settings['log_path'])
+    logger.info("logrotate_filesize: %s" % settings['logrotate_filesize'])
+    logger.info("logrotate_numfiles: %s" % settings['logrotate_numfiles'])
     
     parser = argparse.ArgumentParser(description='Smart Wheel GUI.')
     parser.add_argument('config_filenames', metavar='config_filenames', type=str, nargs='*',
@@ -981,7 +1025,7 @@ def main():
     logger.info("command line arguments: %s" % str(args))
 
     root = tk.Tk()
-    root.title("SmartWheel controller")
+    root.title("Opteq Smart Wheel controller")
 
     smart_modules = []
     smart_wheels_loaded = False
@@ -1014,7 +1058,8 @@ def main():
 
     # log files
     for sm in smart_modules:
-        filename = os.path.join(LOG_PATH, '%s.log' % sm.extra['wheel_slug'])
+        filename = os.path.join(
+            settings['log_path'], '%s.log' % sm.extra['wheel_slug'])
         logger.info("Look for logfile at [%s]" % filename)
         # os.remove(filename)
         # if os.path.exists(filename):

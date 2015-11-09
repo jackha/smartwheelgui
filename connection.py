@@ -362,7 +362,7 @@ class Connection(object):
         elif self.conf.connection_type == ConnectionConfig.CONNECTION_TYPE_ETHERNET:
             try:
                 connection = SocketWrapper(socket.AF_INET, socket.SOCK_STREAM)
-                connection.connect((self.conf.ip_address, self.conf.ethernet_port))
+                connection.connect((self.conf.ip_address, int(self.conf.ethernet_port)))
             except socket_error as serr:
                 if serr.errno == socket_errno.ECONNREFUSED:
                     self.last_error = 'connection refused (%s).' % socket_errno.errorcode[serr.errno]

@@ -69,9 +69,9 @@ class WheelGUI(object):
         'module-address': '6',
     }
     STATUS_PARAMS = [
-        'PF status',
-        'cnt: PID, PLC, MAE',
-        'time (us): PID, PLC, MAE',
+        # 'PF status',
+        # 'cnt: PID, PLC, MAE',
+        # 'time (us): PID, PLC, MAE',
         'process',
         'counters',
         ]
@@ -100,7 +100,7 @@ class WheelGUI(object):
     ]
     ADC_COLUMNS = ('param', 'act', 'min', 'max')
     
-    LBL_FIRMWARE = 'firmware'
+    LBL_FIRMWARE = 'wheel_gui_firmware'
 
     def __init__(
         self, root, parent=None, smart_wheel=None):
@@ -206,15 +206,15 @@ class WheelGUI(object):
         lf.columnconfigure(0, weight=1)
         lf.rowconfigure(0, weight=1)
         
-        self.update_adc_table()
+        self.adc_iids = {}
+        self.create_adc_table()
 
         btn = ttk.Button(lf, text='Reset min/max', command=self.reset_min_max_adc)
         btn.grid(row=1, column=0)
-         
-    @just_try_it
-    def update_adc_table(self):
+
+    def create_adc_table(self):
         """
-        update adc table using most recent readings
+        create adc table using most recent readings
         """
         self.adc_tree = ttk.Treeview(self.adc_lf)
          
@@ -233,12 +233,36 @@ class WheelGUI(object):
             for i in range(num_labels):
                 label = self.smart_wheel.cmd_from_wheel[SWM.CMD_GET_ADC_LABELS][i+2]
                 adc = self.smart_wheel.cmd_from_wheel[SWM.CMD_GET_VOLTAGES]
-                self.adc_tree.insert("", "end", text=label, values=(adc[i+1], adc[i+num_labels+1], adc[i+num_labels*2+1]))
+                # initially set the values, but we change them later using update_adc_table
+                iid = self.adc_tree.insert(
+                    "", "end", 
+                    text=label, 
+                    values=(adc[i+1], adc[i+num_labels+1], adc[i+num_labels*2+1]))
+                self.adc_iids[label] = iid  # set item id for later referral
         else:
             # no data from wheel
             self.adc_tree.insert("", "end", text="ADC", values=('n/a', 'n/a', 'n/a'))
-        
+
         self.adc_tree.grid(row=0, column=0, columnspan=3, sticky=tk.NSEW)
+         
+    @just_try_it
+    def update_adc_table(self):
+        """
+        update adc table with most recent readings
+
+        self.adc_tree must be created using create_adc_table
+        """
+        if (SWM.CMD_GET_ADC_LABELS in self.smart_wheel.cmd_from_wheel and
+           SWM.CMD_GET_VOLTAGES in self.smart_wheel.cmd_from_wheel):
+            # CMD_GET_ADC_LABELS returns "'$60', '8', 'Vin', '3V3', 'NC', 'Curr1', 'Curr2', 'Nc2', 'Nc3', 'NTC'"
+            num_labels = int(self.smart_wheel.cmd_from_wheel[SWM.CMD_GET_ADC_LABELS][1])
+            for i in range(num_labels):
+                label = self.smart_wheel.cmd_from_wheel[SWM.CMD_GET_ADC_LABELS][i+2]
+                adc = self.smart_wheel.cmd_from_wheel[SWM.CMD_GET_VOLTAGES]
+                # set the values
+                self.adc_tree.set(self.adc_iids[label], column=0, value=adc[i+1])  # avg
+                self.adc_tree.set(self.adc_iids[label], column=1, value=adc[i+num_labels+1])  # min
+                self.adc_tree.set(self.adc_iids[label], column=2, value=adc[i+num_labels*2+1])  # max
 
     def reset_min_max_adc(self):
         """
@@ -310,33 +334,32 @@ class WheelGUI(object):
         if cmd[0] == '$10':  # measurements, run $60 to find out number of measurements
             pass
         elif cmd[0] == '$11':  # status, error words
-            status = int(cmd[1])
-            error = int(cmd[2])
-            self.smart_wheel.set_label('3 EnableBit-read', 0b0000000000001000 & status > 0)
-            self.smart_wheel.set_label('4 Esconrdy1-read', 0b0000000000010000 & status > 0)
-            self.smart_wheel.set_label('5 Esconrdy2-read', 0b0000000000100000 & status > 0)
-            self.smart_wheel.set_label('7 WheelMove-read', 0b0000000010000000 & status > 0)
-            self.smart_wheel.set_label('8 SteerMove-read', 0b0000000100000000 & status > 0)
-            self.smart_wheel.set_label('9 JoystickAc-read', 0b0000001000000000 & status > 0)
-            self.smart_wheel.set_label('10 Joystickm-read', 0b0000010000000000 & status > 0)
-            self.smart_wheel.set_label('15 AlarmBit-read', 0b1000000000000000 & status > 0)
+            # status = int(cmd[1])
+            # error = int(cmd[2])
+            status_error = self.smart_wheel.get_status_error()
+            self.smart_wheel.set_label('3 EnableBit-read', int(status_error[SWM.STATUS_ENABLEBIT]))
+            self.smart_wheel.set_label('4 Esconrdy1-read', int(status_error[SWM.STATUS_ESCONRDY1]))
+            self.smart_wheel.set_label('5 Esconrdy2-read', int(status_error[SWM.STATUS_ESCONRDY2]))
+            self.smart_wheel.set_label('7 WheelMove-read', int(status_error[SWM.STATUS_WHEELMOVE]))
+            self.smart_wheel.set_label('8 SteerMove-read', int(status_error[SWM.STATUS_STEERMOVE]))
+            self.smart_wheel.set_label('9 JoystickAc-read', int(status_error[SWM.STATUS_JOYSTICKAC]))
+            self.smart_wheel.set_label('10 Joystickm-read', int(status_error[SWM.STATUS_JOYSTICKM]))
+            self.smart_wheel.set_label('15 AlarmBit-read', int(status_error[SWM.STATUS_ALARMBIT]))
 
-            self.smart_wheel.set_label('0 MAELimPlus-read', 0b0000000000000001 & error > 0)
-            self.smart_wheel.set_label('1 MAELimMin-read', 0b0000000000000010 & error > 0)
-            self.smart_wheel.set_label('2 MAECntrErr-read', 0b0000000000000100 & error > 0)
-            self.smart_wheel.set_label('3 VinAlarm-read', 0b0000000000001000 & error > 0)
-            self.smart_wheel.set_label('4 V5Alarm-read', 0b0000000000010000 & error > 0)
-            self.smart_wheel.set_label('5 V3V3-read', 0b0000000000100000 & error > 0)
-            self.smart_wheel.set_label('9 Current1-read', 0b0000001000000000 & error > 0)
-            self.smart_wheel.set_label('10 Current2-read', 0b0000010000000000 & error > 0)
-            self.smart_wheel.set_label('11 CommandFa-read', 0b0000100000000000 & error > 0)
-            self.smart_wheel.set_label('14 Watchdog-read', 0b0100000000000000 & error > 0)
-            self.smart_wheel.set_label('15 AlarmBit-read', 0b1000000000000000 & error > 0)
-        elif cmd[0] == '$13':
-            pass
+            self.smart_wheel.set_label('0 MAELimPlus-read', int(status_error[SWM.ERROR_MAELIMPLUS]))
+            self.smart_wheel.set_label('1 MAELimMin-read', int(status_error[SWM.ERROR_MAELIMMIN]))
+            self.smart_wheel.set_label('2 MAECntrErr-read', int(status_error[SWM.ERROR_MAECNTRERR]))
+            self.smart_wheel.set_label('3 VinAlarm-read', int(status_error[SWM.ERROR_VIMALARM]))
+            self.smart_wheel.set_label('4 V5Alarm-read', int(status_error[SWM.ERROR_V5ALARM]))
+            self.smart_wheel.set_label('5 V3V3-read', int(status_error[SWM.ERROR_V3V3]))
+            self.smart_wheel.set_label('9 Current1-read', int(status_error[SWM.ERROR_CURRENT1]))
+            self.smart_wheel.set_label('10 Current2-read', int(status_error[SWM.ERROR_CURRENT2]))
+            self.smart_wheel.set_label('11 CommandFa-read', int(status_error[SWM.ERROR_COMMANDFA]))
+            self.smart_wheel.set_label('14 Watchdog-read', int(status_error[SWM.ERROR_WATCHDOG]))
+            self.smart_wheel.set_label('15 AlarmBit-read', int(status_error[SWM.ERROR_ALARMBIT]))
         elif cmd[0] == '$29':
             # firmware
-            self.smart_wheel.set_label(self.LBL_FIRMWARE, ' '.join(cmd[1:]))
+            self.smart_wheel.set_label(self.LBL_FIRMWARE, self.smart_wheel.firmware)
         elif cmd[0] == '$50':
             self.smart_wheel.set_label('kpid-wheel-read', cmd[1])
             self.smart_wheel.set_label('kpid-steer-read', cmd[2])

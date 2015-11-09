@@ -195,7 +195,7 @@ class MockSerial(object):
                     logging.debug("watchdog disabled")
                     self.use_watchdog = False
             elif command[0] == '$29':
-                response = ['$29', 'mock']
+                response = ['$29', 'MockSerial']
             elif command[0] == '$50':
                 response = ['$50', ]
                 response.extend([str(p) for p in self.pid])
